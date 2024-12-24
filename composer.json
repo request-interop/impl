@@ -1,0 +1,38 @@
+{
+    "name": "request-interop/impl",
+    "description": "Reference implementations of the RequestInterop interfaces.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Paul M. Jones",
+            "email": "pmjones@pmjones.io"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "RequestInterop\\Impl\\": "./src"
+        }
+    },
+    "require": {
+        "php": "^8.4",
+        "request-interop/interface": "1.x-dev"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "RequestInterop\\Impl\\": "./tests"
+        }
+    },
+    "require-dev": {
+        "pds/skeleton": "^1.0",
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^11.0",
+        "nyholm/psr7": "^1.0"
+    },
+    "scripts": {
+        "analyze": "./vendor/bin/phpstan analyze -c phpstan.neon",
+        "check": "composer test && composer analyze",
+        "test": "./vendor/bin/phpunit",
+        "test-coverage": "./vendor/bin/phpunit --coverage-html=./tmp/coverage"
+    }
+}
