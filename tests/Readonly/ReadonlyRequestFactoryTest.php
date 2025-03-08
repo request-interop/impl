@@ -4,19 +4,15 @@ declare(strict_types=1);
 namespace RequestInterop\Impl\Readonly;
 
 use BadMethodCallException;
-use RequestInterop\Impl\RequestFactory;
+use RequestInterop\Impl\RequestFactoryImpl;
 use RequestInterop\Impl\RequestFactoryTestCase;
-use RequestInterop\Interface\Body;
-use UnexpectedValueException;
+use InvalidArgumentException;
 
-/**
- * @phpstan-import-type BodyResource from Body
- */
-class ReadonlyFactoryTest extends RequestFactoryTestCase
+class ReadonlyRequestFactoryTest extends RequestFactoryTestCase
 {
     /**
      * @inheritdoc
-     * @return ReadonlyFactory
+     * @return ReadonlyRequestFactory
      */
     protected function newRequestFactory(
         ?array $_cookie = null,
@@ -24,55 +20,54 @@ class ReadonlyFactoryTest extends RequestFactoryTestCase
         ?array $_get = null,
         ?array $_post = null,
         ?array $_server = null,
-        mixed $body = null,
-    ) : RequestFactory
+        mixed $phpInput = null,
+    ) : RequestFactoryImpl
     {
-        return new ReadonlyFactory(
+        return new ReadonlyRequestFactory(
             _cookie: $_cookie,
             _files: $_files,
             _get: $_get,
             _post: $_post,
             _server: $_server,
-            body: $body,
+            phpInput: $phpInput,
         );
     }
 
     public function testNewRequest() : void
     {
-        $this->assertInstanceof(ReadonlyRequest::CLASS, $this->newRequestFactory()->newRequest());
+        $_SERVER = [
+            'SERVER_ADDR' => '127.0.0.1',
+        ];
+
+        $this->assertInstanceof(ReadonlyRequest::class, $this->newRequestFactory()->newRequest());
     }
 
-    public function testNewUrl() : void
+    public function testnewRequestUrl() : void
     {
-        $this->assertInstanceof(ReadonlyUrl::CLASS, $this->newRequestFactory()->newUrl());
+        $_SERVER = [
+            'SERVER_ADDR' => '127.0.0.1',
+        ];
+
+        $this->assertInstanceof(ReadonlyRequestUrl::class, $this->newRequestFactory()->newRequestUrl());
     }
 
-    public function testNewUpload() : void
+    public function testnewRequestUpload() : void
     {
         $this->assertInstanceOf(
-            ReadonlyUpload::CLASS,
+            ReadonlyRequestUpload::class,
             $this
                 ->newRequestFactory()
-                ->newUpload(
+                ->newRequestUpload(
                     tmpName: '/tmp/upload/cnlk68jwhy',
                     error: 0,
                 )
             );
     }
 
-    public function testNewBody() : void
-    {
-        /** @var BodyResource */
-        $bodyResource = fopen('php://temp', 'r');
-        $factory = $this->newRequestFactory();
-        $this->expectException(BadMethodCallException::CLASS);
-        $factory->newBody($bodyResource);
-    }
-
     public function testReadonly() : void
     {
         $factory = $this->newRequestFactory();
-        $this->expectException(UnexpectedValueException::CLASS);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Readonly values must be null, scalar, or array.');
         $factory->readonly(['foo' => new \stdClass()]);
     }

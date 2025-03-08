@@ -3,25 +3,25 @@ declare(strict_types=1);
 
 namespace RequestInterop\Impl;
 
-use RequestInterop\Interface\Upload;
+use RequestInterop\Interface\RequestUpload;
 
-abstract class UploadTestCase extends \PHPUnit\Framework\TestCase
+abstract class RequestUploadTestCase extends \PHPUnit\Framework\TestCase
 {
-    abstract public function newUpload(
+    abstract public function newRequestUpload(
         string $tmpName,
         int $error,
         ?string $name = null,
         ?string $fullPath = null,
         ?string $type = null,
         ?int $size = null,
-    ) : Upload;
+    ) : RequestUpload;
 
     public function test() : void
     {
         $text = 'This is a fake upload tmp file.';
         $tmpName = __DIR__ . DIRECTORY_SEPARATOR . 'FakeUpload.txt';
 
-        $upload = $this->newUpload(
+        $upload = $this->newRequestUpload(
             tmpName: $tmpName,
             error: 0,
             name: basename($tmpName),

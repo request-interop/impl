@@ -3,24 +3,24 @@ declare(strict_types=1);
 
 namespace RequestInterop\Impl\Readonly;
 
-use RequestInterop\Impl\UploadTestCase;
-use RequestInterop\Interface\Upload;
+use RequestInterop\Impl\RequestUploadTestCase;
+use RequestInterop\Interface\RequestUpload;
 
-class ReadonlyUploadTest extends UploadTestCase
+class ReadonlyRequestUploadTest extends RequestUploadTestCase
 {
     /**
-     * @return ReadonlyUpload
+     * @return ReadonlyRequestUpload
      */
-    public function newUpload(
+    public function newRequestUpload(
         string $tmpName,
         int $error,
         ?string $name = null,
         ?string $fullPath = null,
         ?string $type = null,
         ?int $size = null,
-    ) : Upload
+    ) : RequestUpload
     {
-        return new ReadonlyUpload(
+        return new ReadonlyRequestUpload(
             tmpName: $tmpName,
             error: $error,
             name: $name,

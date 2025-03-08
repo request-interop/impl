@@ -3,66 +3,42 @@ declare(strict_types=1);
 
 namespace RequestInterop\Impl\Mutable;
 
-use RequestInterop\Interface\Body;
 use RequestInterop\Interface\Request;
+use RequestInterop\Interface\RequestTypeAliases;
 
 /**
- * @phpstan-import-type BodyResource from Body
- * @phpstan-import-type CookiesArray from Request
- * @phpstan-import-type FilesArray from Request
- * @phpstan-import-type HeadersArray from Request
- * @phpstan-import-type InputArray from Request
- * @phpstan-import-type MethodString from Request
- * @phpstan-import-type QueryArray from Request
- * @phpstan-import-type ServerArray from Request
- * @phpstan-import-type UploadsArray from Request
+ * @phpstan-import-type cookies_array from RequestTypeAliases
+ * @phpstan-import-type files_array from RequestTypeAliases
+ * @phpstan-import-type headers_array from RequestTypeAliases
+ * @phpstan-import-type input_array from RequestTypeAliases
+ * @phpstan-import-type method_string from RequestTypeAliases
+ * @phpstan-import-type query_array from RequestTypeAliases
+ * @phpstan-import-type server_array from RequestTypeAliases
+ * @phpstan-import-type uploads_array from RequestTypeAliases
  */
-class MutableRequest implements Request, Body
+class MutableRequest implements Request
 {
     /**
-     * @inheritdoc
-     */
-    public mixed $body {
-        get {
-            if ($this->body === null) {
-                $this->body = fopen('php://input', 'rb');
-            }
-
-            return $this->body;
-        }
-    }
-
-    /**
-     * @param CookiesArray $cookies
-     * @param FilesArray $files
-     * @param HeadersArray $headers
-     * @param InputArray $input
-     * @param MethodString $method
-     * @param QueryArray $query
-     * @param ServerArray $server
-     * @param UploadsArray $uploads
-     * @param ?BodyResource $body
+     * @param cookies_array $cookies
+     * @param files_array $files
+     * @param headers_array $headers
+     * @param input_array $input
+     * @param method_string $method
+     * @param query_array $query
+     * @param server_array $server
+     * @param uploads_array $uploads
      */
     public function __construct(
-        public array $cookies = [],
-        public array $files = [],
-        public array $headers = [],
-        public array $input = [],
-        public string $method = '',
-        public array $query = [],
-        public array $server = [],
-        public array $uploads = [],
-        public MutableUrl $url = new MutableUrl(),
-        mixed $body = null,
+        public array $cookies,
+        public array $files,
+        public array $headers,
+        public array $input,
+        public string $method,
+        public array $query,
+        public array $server,
+        public array $uploads,
+        public MutableRequestUrl $url,
+        public MutableRequestBody $body,
     ) {
-        $this->body = $body;
-    }
-
-    public function __toString() : string
-    {
-        /** @var BodyResource */
-        $body = $this->body;
-        rewind($body);
-        return (string) stream_get_contents($body);
     }
 }

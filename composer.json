@@ -16,7 +16,11 @@
     },
     "require": {
         "php": "^8.4",
-        "request-interop/interface": "1.x-dev"
+        "request-interop/interface": "*",
+        "stream-interop/interface": "1.x@dev",
+        "stream-interop/impl": "1.x@dev",
+        "uri-interop/interface": "1.x@dev",
+        "uri-interop/impl": "1.x@dev"
     },
     "autoload-dev": {
         "psr-4": {
@@ -34,5 +38,12 @@
         "check": "composer test && composer analyze",
         "test": "./vendor/bin/phpunit",
         "test-coverage": "./vendor/bin/phpunit --coverage-html=./tmp/coverage"
-    }
+    },
+    "minimum-stability": "dev",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../interface"
+        }
+    ]
 }

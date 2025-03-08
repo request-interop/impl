@@ -3,19 +3,18 @@ declare(strict_types=1);
 
 namespace RequestInterop\Impl;
 
-use RequestInterop\Impl\RequestFactory;
-use RequestInterop\Interface\Body;
-use RequestInterop\Interface\Request;
-use RequestInterop\Interface\Upload;
+use RequestInterop\Impl\RequestFactoryImpl;
+use RequestInterop\Interface\RequestTypeAliases;
+use RequestInterop\Interface\RequestUpload;
+use RuntimeException;
 
 /**
- * @phpstan-import-type BodyResource from Body
- * @phpstan-import-type CookiesArray from Request
- * @phpstan-import-type FilesArray from Request
- * @phpstan-import-type InputArray from Request
- * @phpstan-import-type QueryArray from Request
- * @phpstan-import-type ServerArray from Request
- * @phpstan-import-type UploadsArray from Request
+ * @phpstan-import-type cookies_array from RequestTypeAliases
+ * @phpstan-import-type files_array from RequestTypeAliases
+ * @phpstan-import-type input_array from RequestTypeAliases
+ * @phpstan-import-type query_array from RequestTypeAliases
+ * @phpstan-import-type server_array from RequestTypeAliases
+ * @phpstan-import-type uploads_array from RequestTypeAliases
  */
 #[\PHPUnit\Framework\Attributes\BackupGlobals(true)]
 abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
@@ -30,12 +29,12 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
     }
 
     /**
-     * @param ?CookiesArray $_cookie
-     * @param ?FilesArray $_files
-     * @param ?QueryArray $_get
-     * @param ?InputArray $_post
-     * @param ?ServerArray $_server
-     * @param string|BodyResource $body
+     * @param ?cookies_array $_cookie
+     * @param ?files_array $_files
+     * @param ?query_array $_get
+     * @param ?input_array $_post
+     * @param ?server_array $_server
+     * @param null|string|resource $phpInput
      */
     abstract protected function newRequestFactory(
         ?array $_cookie = null,
@@ -43,27 +42,22 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
         ?array $_get = null,
         ?array $_post = null,
         ?array $_server = null,
-        mixed $body = null,
-    ) : RequestFactory;
+        mixed $phpInput = null,
+    ) : RequestFactoryImpl;
 
     abstract public function testNewRequest() : void;
 
-    abstract public function testNewUrl() : void;
+    abstract public function testnewRequestUrl() : void;
 
-    abstract public function testNewUpload() : void;
+    abstract public function testnewRequestUpload() : void;
 
     public function testContentType() : void
     {
         $this->assertNull($this->newRequestFactory()->contentType());
-
-        $factory = $this->newRequestFactory(_server: [
-            'CONTENT_TYPE' => 'TEXT/plain',
-        ]);
-
+        $factory = $this->newRequestFactory(_server: ['CONTENT_TYPE' => 'TEXT/plain']);
         $expect = 'text/plain';
         $actual = $factory->contentType();
         $this->assertSame($expect, $actual);
-
     }
 
     public function testCookiesArray() : void
@@ -141,7 +135,12 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
     public function testInputArray() : void
     {
         $_post = ['foo' => 'bar'];
-        $actual = $this->newRequestFactory(_post: $_post)->inputArray();
+
+        $actual = $this->newRequestFactory(
+            _post: $_post,
+            phpInput: null,
+        )->inputArray();
+
         $this->assertSame($_post, $actual);
     }
 
@@ -153,7 +152,7 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
             _server: [
                 'CONTENT_TYPE' => 'application/json',
             ],
-            body: 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.json',
+            phpInput: 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.json',
         );
 
         $this->assertSame($expect, $factory->inputArray());
@@ -167,7 +166,7 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
             _server: [
                 'CONTENT_TYPE' => 'application/xml',
             ],
-            body: 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml',
+            phpInput: 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml',
         );
 
         $this->assertSame($expect, $factory->inputArray());
@@ -176,7 +175,7 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
             _server: [
                 'CONTENT_TYPE' => 'text/xml',
             ],
-            body: 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml',
+            phpInput: 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml',
         );
 
         $this->assertSame($expect, $factory->inputArray());
@@ -237,10 +236,12 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
 
     public function testUploadsArrayFilesFromItem(): void
     {
+        $tmpName = __DIR__ . DIRECTORY_SEPARATOR . 'FakeUpload.txt';
+
         $actual = $this->newRequestFactory(
             _files: [
                 'photo' => [
-                    'tmp_name' => '/tmp/upload/ods9bqgt',
+                    'tmp_name' => $tmpName,
                     'error' => 0,
                     'name' => 'calvin.jpg',
                     'full_path' => '/Users/watterson/Pictures/calvin.jpg',
@@ -251,16 +252,16 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
             ->uploadsArray();
 
         $this->assertCount(1, $actual);
-        $this->assertInstanceOf(Upload::CLASS, $actual['photo']);
+        $this->assertInstanceOf(RequestUpload::class, $actual['photo']);
         $this->assertSame('calvin.jpg', $actual['photo']->name);
 
-        /** @var array{profile: array{details: array{photo: Upload}}} $actual */
+        /** @var array{profile: array{details: array{photo: RequestUpload}}} $actual */
         $actual = $this->newRequestFactory(
             _files: [
                 'profile' => [
                     'details' => [
                         'photo' => [
-                            'tmp_name' => '/tmp/upload/r34b5960',
+                            'tmp_name' => $tmpName,
                             'error' => 0,
                             'name' => 'hobbes.jpg',
                             'full_path' => '/Users/watterson/Pictures/hobbes.jpg',
@@ -276,18 +277,20 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
         $this->assertSame('hobbes.jpg', $actual['profile']['details']['photo']->name);
     }
 
-    public function tesUploadsArrayFilesFromGroup(): void
+    public function testUploadsArrayFilesFromGroup(): void
     {
-        /** @var array{team: array{people: array{photos: Upload[]}}} $actual */
+        $tmpName = __DIR__ . DIRECTORY_SEPARATOR . 'FakeUpload.txt';
+
+        /** @var array{team: array{people: array{photos: RequestUpload[]}}} $actual */
         $actual = $this->newRequestFactory(
             _files: [
                 'team' => [
                     'people' => [
                         'photos' => [
                             'tmp_name' => [
-                                0 => '/tmp/upload/xexrsaq9',
-                                1 => '/tmp/upload/j6m0j94k',
-                                2 => '/tmp/upload/8p2ki2px',
+                                0 => $tmpName,
+                                1 => $tmpName,
+                                2 => $tmpName,
                             ],
                             'error' => [
                                 0 => 0,
@@ -328,16 +331,18 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
 
     public function testUploadsArrayFilesFromGroupNested(): void
     {
-        /** @var array{alter-egos: array<int, array{photo: Upload[]}>} $actual */
+        $tmpName = __DIR__ . DIRECTORY_SEPARATOR . 'FakeUpload.txt';
+
+        /** @var array{alter-egos: array<int, array{photo: RequestUpload[]}>} $actual */
         $actual = $this->newRequestFactory(
             _files: [
                 'alter-egos' => [
                     'tmp_name' => [
                         0 => [
                             'photo' => [
-                                0 => '/tmp/upload/j4t26y5f',
-                                1 => '/tmp/upload/yvdno7je',
-                                2 => '/tmp/upload/h9yrob0g',
+                                0 => $tmpName,
+                                1 => $tmpName,
+                                2 => $tmpName,
                             ],
                         ],
                     ],
@@ -396,25 +401,8 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
         $this->assertSame('captain-napalm.jpg', $actual['alter-egos'][0]['photo'][2]->name);
     }
 
-    public function testUrlArray() : void
+    public function testUrlProperties() : void
     {
-        // nothing
-        $factory = $this->newRequestFactory(_server: []);
-
-        $expect = [
-            'scheme' => 'http',
-            'user' => null,
-            'pass' => null,
-            'host' => null,
-            'port' => null,
-            'path' => null,
-            'query' => null,
-            'fragment' => null,
-        ];
-
-        $this->assertSame($expect, $factory->urlArray());
-
-        // everything
         $factory = $this->newRequestFactory(_server: [
             'HTTPS' => 'on',
             'HTTP_HOST' => 'example.com',
@@ -427,136 +415,121 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
 
         $expect = [
             'scheme' => 'https',
-            'user' => 'watterson',
-            'pass' => 'bopass',
             'host' => 'example.com',
             'port' => 443,
             'path' => '/foo/bar',
             'query' => 'baz=dib',
-            'fragment' => null,
         ];
 
-        $this->assertSame($expect, $factory->urlArray());
+        $this->assertSame($expect, $factory->urlProperties());
     }
 
-    public function testUrlArrayScheme() : void
+    public function testUrlScheme() : void
     {
         $expect = ['scheme' => 'http'];
         $actual = $this->newRequestFactory();
-        $this->assertSame($expect, $actual->urlArrayScheme());
+        $this->assertSame($expect, $actual->urlScheme());
 
         $expect = ['scheme' => 'http'];
         $actual = $this->newRequestFactory(_server: ['HTTPS' => 'Off']);
-        $this->assertSame($expect, $actual->urlArrayScheme());
+        $this->assertSame($expect, $actual->urlScheme());
 
         $expect = ['scheme' => 'https'];
         $actual = $this->newRequestFactory(_server: ['HTTPS' => '1']);
-        $this->assertSame($expect, $actual->urlArrayScheme());
+        $this->assertSame($expect, $actual->urlScheme());
 
         $expect = ['scheme' => 'https'];
         $actual = $this->newRequestFactory(_server: ['HTTPS' => 'on']);
-        $this->assertSame($expect, $actual->urlArrayScheme());
+        $this->assertSame($expect, $actual->urlScheme());
     }
 
-    public function testUrlArrayUser() : void
+    public function testUrlHostAndPort() : void
     {
-        $expect = ['user' => null, 'pass' => null];
-        $actual = $this->newRequestFactory();
-        $this->assertSame($expect, $actual->urlArrayUser());
-
-        $expect = ['user' => 'watterson', 'pass' => 'bopass'];
-        $actual = $this->newRequestFactory(_server: [
-            'HTTP_AUTHORIZATION' => 'Basic ' . base64_encode('watterson:bopass')
-        ]);
-        $this->assertSame($expect, $actual->urlArrayUser());
-    }
-
-    public function testUrlArrayHost() : void
-    {
-        $expect = ['host' => null, 'port' => null];
-        $actual = $this->newRequestFactory();
-        $this->assertSame($expect, $actual->urlArrayHost());
-
         $expect = ['host' => 'example.com', 'port' => null];
         $actual = $this->newRequestFactory(_server: [
             'HTTP_HOST' => 'example.com',
         ]);
 
-        $this->assertSame($expect, $actual->urlArrayHost());
+        $this->assertSame($expect, $actual->urlHostAndPort());
 
         $expect = ['host' => 'example.com', 'port' => 8080];
         $actual = $this->newRequestFactory(_server: [
             'HTTP_HOST' => 'example.com:8080',
         ]);
-        $this->assertSame($expect, $actual->urlArrayHost());
+        $this->assertSame($expect, $actual->urlHostAndPort());
 
         $expect = ['host' => 'example.com', 'port' => 8080];
         $actual = $this->newRequestFactory(_server: [
             'HTTP_HOST' => 'example.com',
             'SERVER_PORT' => '8080',
         ]);
-        $this->assertSame($expect, $actual->urlArrayHost());
+        $this->assertSame($expect, $actual->urlHostAndPort());
 
         $expect = ['host' => '8.8.8.8', 'port' => null];
         $actual = $this->newRequestFactory(_server: [
             'SERVER_ADDR' => '8.8.8.8',
         ]);
 
-        $this->assertSame($expect, $actual->urlArrayHost());
+        $this->assertSame($expect, $actual->urlHostAndPort());
 
         $expect = ['host' => '8.8.8.8', 'port' => 8080];
         $actual = $this->newRequestFactory(_server: [
             'SERVER_ADDR' => '8.8.8.8',
             'SERVER_PORT' => '8080',
         ]);
-        $this->assertSame($expect, $actual->urlArrayHost());
+        $this->assertSame($expect, $actual->urlHostAndPort());
 
         $expect = ['host' => '[2001:4860:4860::8888]', 'port' => null];
         $actual = $this->newRequestFactory(_server: [
             'SERVER_ADDR' => '2001:4860:4860::8888',
         ]);
 
-        $this->assertSame($expect, $actual->urlArrayHost());
+        $this->assertSame($expect, $actual->urlHostAndPort());
 
         $expect = ['host' => '[2001:4860:4860::8888]', 'port' => 8080];
         $actual = $this->newRequestFactory(_server: [
             'SERVER_ADDR' => '2001:4860:4860::8888',
             'SERVER_PORT' => '8080',
         ]);
-        $this->assertSame($expect, $actual->urlArrayHost());
+        $this->assertSame($expect, $actual->urlHostAndPort());
+
+        $actual = $this->newRequestFactory();
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Could not determine host and port.');
+        $actual->urlHostAndPort();
     }
 
-    public function testUrlArrayData() : void
+    public function testUrlPathAndQuery() : void
     {
-        $expect = ['path' => null, 'query' => null];
+        $expect = ['path' => '', 'query' => ''];
         $actual = $this->newRequestFactory();
-        $this->assertSame($expect, $actual->urlArrayData());
+        $this->assertSame($expect, $actual->urlPathAndQuery());
 
         $expect = ['path' => '/foo/bar', 'query' => 'baz=dib'];
         $actual = $this->newRequestFactory(_server: [
             'IIS_WasUrlRewritten' => '1',
             'UNENCODED_URL' => '/foo/bar?baz=dib',
         ]);
-        $this->assertSame($expect, $actual->urlArrayData());
+        $this->assertSame($expect, $actual->urlPathAndQuery());
 
         $expect = ['path' => '/foo/bar', 'query' => 'baz=dib'];
         $actual = $this->newRequestFactory(_server: [
             'REQUEST_URI' => '/foo/bar?baz=dib',
         ]);
-        $this->assertSame($expect, $actual->urlArrayData());
+        $this->assertSame($expect, $actual->urlPathAndQuery());
 
         $expect = ['path' => '/foo/bar', 'query' => 'baz=dib'];
         $actual = $this->newRequestFactory(_server: [
             'REQUEST_URI' => '/foo/bar',
             'QUERY_STRING' => 'baz=dib',
         ]);
-        $this->assertSame($expect, $actual->urlArrayData());
+        $this->assertSame($expect, $actual->urlPathAndQuery());
 
         $expect = ['path' => '/foo/bar', 'query' => 'zim=gir'];
         $actual = $this->newRequestFactory(_server: [
             'REQUEST_URI' => '/foo/bar?baz=dib',
             'QUERY_STRING' => 'zim=gir',
         ]);
-        $this->assertSame($expect, $actual->urlArrayData());
+        $this->assertSame($expect, $actual->urlPathAndQuery());
     }
 }

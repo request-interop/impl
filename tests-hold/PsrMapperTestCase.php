@@ -9,13 +9,13 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
 use RequestInterop\Interface\Body;
 use RequestInterop\Interface\Request;
-use RequestInterop\Interface\Upload;
+use RequestInterop\Interface\RequestUpload;
 use RequestInterop\Interface\Url;
 use UnexpectedValueException;
 
 /**
- * @phpstan-import-type BodyResource from Body
- * @phpstan-import-type UploadsArray from Request
+ * @phpstan-import-type phpInput from Body
+ * @phpstan-import-type uploads_array from RequestTypeAliases
  */
 abstract class PsrMapperTestCase extends \PHPUnit\Framework\TestCase
 {
@@ -131,7 +131,7 @@ abstract class PsrMapperTestCase extends \PHPUnit\Framework\TestCase
         $actualUpload = $actualUploads['bar-upload'];
         $this->assertSame('bar.txt', $actualUpload->name);
 
-        /** @var UploadsArray */
+        /** @var uploads_array */
         $actualUploads = $actual->uploads['baz-uploads'];
 
         /** @var Upload */
@@ -169,7 +169,7 @@ abstract class PsrMapperTestCase extends \PHPUnit\Framework\TestCase
         $actual = $this->psrMapper->fromPsrParsedBody($expect);
         $this->assertSame($expect, $actual);
 
-        $this->expectException(UnexpectedValueException::CLASS);
+        $this->expectException(UnexpectedValueException::class);
         $this->psrMapper->fromPsrParsedBody(['foo' => fopen('php://temp', 'r')]);
     }
 
@@ -186,7 +186,7 @@ abstract class PsrMapperTestCase extends \PHPUnit\Framework\TestCase
         $actual = $this->psrMapper->fromPsrQueryParams($expect);
         $this->assertSame($expect, $actual);
 
-        $this->expectException(UnexpectedValueException::CLASS);
+        $this->expectException(UnexpectedValueException::class);
         $this->psrMapper->fromPsrQueryParams(['foo' => fopen('php://temp', 'r')]);
     }
 
@@ -199,7 +199,7 @@ abstract class PsrMapperTestCase extends \PHPUnit\Framework\TestCase
         $actual = $this->psrMapper->fromPsrServerParams($expect);
         $this->assertSame($expect, $actual);
 
-        $this->expectException(UnexpectedValueException::CLASS);
+        $this->expectException(UnexpectedValueException::class);
         $this->psrMapper->fromPsrServerParams(['foo' => fopen('php://temp', 'r')]);
     }
 
@@ -242,9 +242,9 @@ abstract class PsrMapperTestCase extends \PHPUnit\Framework\TestCase
 
     public function testNewBody() : void
     {
-        /** @var BodyResource */
-        $bodyResource = fopen('php://temp', 'r');
-        $this->expectException(BadMethodCallException::CLASS);
-        $this->psrMapper->newBody($bodyResource);
+        /** @var phpInput */
+        $phpInput = fopen('php://temp', 'r');
+        $this->expectException(BadMethodCallException::class);
+        $this->psrMapper->newBody($phpInput);
     }
 }

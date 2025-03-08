@@ -15,18 +15,18 @@ use Psr\Http\Message\UriInterface;
 use RequestInterop\Interface\Body;
 use RequestInterop\Interface\Factory;
 use RequestInterop\Interface\Request;
-use RequestInterop\Interface\Upload;
+use RequestInterop\Interface\RequestUpload;
 use RequestInterop\Interface\Url;
 use UnexpectedValueException;
 
 /**
- * @phpstan-import-type BodyResource from Body
- * @phpstan-import-type CookiesArray from Request
- * @phpstan-import-type HeadersArray from Request
- * @phpstan-import-type InputArray from Request
- * @phpstan-import-type QueryArray from Request
- * @phpstan-import-type ServerArray from Request
- * @phpstan-import-type UploadsArray from Request
+ * @phpstan-import-type phpInput from Body
+ * @phpstan-import-type cookies_array from RequestTypeAliases
+ * @phpstan-import-type headers_array from RequestTypeAliases
+ * @phpstan-import-type input_array from RequestTypeAliases
+ * @phpstan-import-type query_array from RequestTypeAliases
+ * @phpstan-import-type server_array from RequestTypeAliases
+ * @phpstan-import-type uploads_array from RequestTypeAliases
  * @phpstan-import-type UrlArray from Url
  */
 abstract class PsrMapper implements Factory
@@ -69,7 +69,7 @@ abstract class PsrMapper implements Factory
 
         foreach ($uploads as $key => $upload) {
             if (is_array($upload)) {
-                /** @var UploadsArray $upload */
+                /** @var uploads_array $upload */
                 $psrUploadedFiles[$key] = $this->toPsrUploadedFiles($upload);
                 continue;
             }
@@ -93,7 +93,7 @@ abstract class PsrMapper implements Factory
 
     public function fromPsr(ServerRequestInterface $psr) : Request
     {
-        /** @var CookiesArray $cookies */
+        /** @var cookies_array $cookies */
         $cookies = $psr->getCookieParams();
 
         $psrParsedBody = $psr->getParsedBody();
@@ -115,7 +115,7 @@ abstract class PsrMapper implements Factory
 
     /**
      * @param object|mixed[] $psrParsedBody
-     * @return InputArray
+     * @return input_array
      */
     public function fromPsrParsedBody(object|array $psrParsedBody) : array
     {
@@ -140,7 +140,7 @@ abstract class PsrMapper implements Factory
 
     /**
      * @param mixed[] $psrQueryParams
-     * @return QueryArray
+     * @return query_array
      */
     public function fromPsrQueryParams(array $psrQueryParams) : array
     {
@@ -165,7 +165,7 @@ abstract class PsrMapper implements Factory
 
     /**
      * @param mixed[] $psrServerParams
-     * @return ServerArray
+     * @return server_array
      */
     public function fromPsrServerParams(array $psrServerParams) : array
     {
@@ -180,18 +180,18 @@ abstract class PsrMapper implements Factory
             throw new UnexpectedValueException("cant xfer type");
         }
 
-        /** @var ServerArray */
+        /** @var server_array */
         return $server;
     }
 
     /**
-     * @return BodyResource
+     * @return phpInput
      */
     public function fromPsrStream(StreamInterface $psrBody) : mixed
     {
         $psrBody->rewind();
 
-        /** @var BodyResource */
+        /** @var phpInput */
         $body = fopen('php://temp', 'wb+');
         fwrite($body, $psrBody->getContents());
         rewind($body);
@@ -200,7 +200,7 @@ abstract class PsrMapper implements Factory
 
     /**
      * @param array<array-key, mixed[]> $psrHeaders
-     * @return HeadersArray
+     * @return headers_array
      */
     public function fromPsrHeaders(array $psrHeaders) : array
     {
@@ -215,7 +215,7 @@ abstract class PsrMapper implements Factory
 
     /**
      * @param mixed[] $psrUploadedFiles
-     * @return UploadsArray
+     * @return uploads_array
      */
     public function fromPsrUploadedFiles(array $psrUploadedFiles) : array
     {
@@ -231,7 +231,7 @@ abstract class PsrMapper implements Factory
             $tmpName = $psrUploadedFile->getStream()->getMetadata('uri');
             assert(is_string($tmpName));
 
-            $uploads[$key] = $this->newUpload(
+            $uploads[$key] = $this->newRequestUpload(
                 tmpName: $tmpName,
                 error: $psrUploadedFile->getError(),
                 fullPath: null,
@@ -257,7 +257,7 @@ abstract class PsrMapper implements Factory
 
         $fragment = $psrUri->getFragment();
 
-        return $this->newUrl(
+        return $this->newRequestUrl(
             scheme: $psrUri->getScheme(),
             host: $psrUri->getHost(),
             port: $psrUri->getPort(),
@@ -288,7 +288,7 @@ abstract class PsrMapper implements Factory
     /**
      * @inheritdoc
      */
-    abstract public function newUpload(
+    abstract public function newRequestUpload(
         string $tmpName,
         int $error,
         ?string $name = null,
@@ -296,9 +296,9 @@ abstract class PsrMapper implements Factory
         ?string $type = null,
         ?int $size = null,
         mixed $body = null,
-    ) : Upload;
+    ) : RequestUpload;
 
-    abstract public function newUrl(
+    abstract public function newRequestUrl(
         ?string $scheme = null,
         ?string $host = null,
         ?int $port = null,
@@ -315,7 +315,7 @@ abstract class PsrMapper implements Factory
     public function newBody(mixed $body) : Body
     {
         throw new BadMethodCallException(
-            'No direct mapping to or from RequestInterop\\Body.'
+            'No direct mapping to or from RequestTypeAliasesInterop\\Body.'
         );
     }
 }

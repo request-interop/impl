@@ -1,19 +1,19 @@
 <?php
 declare(strict_types=1);
 
-namespace RequestInterop\Impl\Mutable;
+namespace RequestInterop\Impl\Readonly;
 
 use RequestInterop\Impl\PsrMapper;
 use RequestInterop\Interface\Request;
-use RequestInterop\Interface\Upload;
+use RequestInterop\Interface\RequestUpload;
 use RequestInterop\Interface\Url;
 
-class MutablePsrMapper extends PsrMapper
+class ReadonlyPsrMapper extends PsrMapper
 {
     /**
      * @inheritdoc
-     * @param MutableUrl $url
-     * @return MutableRequest
+     * @param ?ReadonlyRequestUrl $url
+     * @return ReadonlyRequest
      */
     public function newRequest(
         ?array $cookies = null,
@@ -28,7 +28,7 @@ class MutablePsrMapper extends PsrMapper
         mixed $body = null,
     ) : Request
     {
-        return new MutableRequest(
+        return new ReadonlyRequest(
             cookies: $cookies ?? [],
             files: $files ?? [],
             headers: $headers ?? [],
@@ -37,16 +37,15 @@ class MutablePsrMapper extends PsrMapper
             query: $query ?? [],
             server: $server ?? [],
             uploads: $uploads ?? [],
-            url: $url ?? $this->newUrl(),
-            body: $body,
+            url: $url ?? $this->newRequestUrl(),
         );
     }
 
     /**
      * @inheritdoc
-     * @return MutableUpload
+     * @return ReadonlyRequestUpload
      */
-    public function newUpload(
+    public function newRequestUpload(
         string $tmpName,
         int $error,
         ?string $name = null,
@@ -54,23 +53,22 @@ class MutablePsrMapper extends PsrMapper
         ?string $type = null,
         ?int $size = null,
         mixed $body = null,
-    ) : Upload
+    ) : RequestUpload
     {
-        return new MutableUpload(
+        return new ReadonlyRequestUpload(
             tmpName: $tmpName,
             error: $error,
             name: $name,
             fullPath: $fullPath,
             type: $type,
             size: $size,
-            body: $body,
         );
     }
 
     /**
-     * @return MutableUrl
+     * @return ReadonlyRequestUrl
      */
-    public function newUrl(
+    public function newRequestUrl(
         ?string $scheme = null,
         ?string $host = null,
         ?int $port = null,
@@ -81,7 +79,7 @@ class MutablePsrMapper extends PsrMapper
         ?string $fragment = null,
     ) : Url
     {
-        return new MutableUrl(
+        return new ReadonlyRequestUrl(
             scheme: $scheme,
             host: $host,
             port: $port,

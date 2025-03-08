@@ -3,17 +3,16 @@ declare(strict_types=1);
 
 namespace RequestInterop\Impl\Mutable;
 
-use RequestInterop\Impl\RequestFactory;
-use RequestInterop\Interface\Body;
+use RequestInterop\Impl\PsrMapper;
 use RequestInterop\Interface\Request;
-use RequestInterop\Interface\Upload;
+use RequestInterop\Interface\RequestUpload;
 use RequestInterop\Interface\Url;
 
-class MutableFactory extends RequestFactory
+class MutablePsrMapper extends PsrMapper
 {
     /**
      * @inheritdoc
-     * @param ?MutableUrl $url
+     * @param MutableUrl $url
      * @return MutableRequest
      */
     public function newRequest(
@@ -30,23 +29,24 @@ class MutableFactory extends RequestFactory
     ) : Request
     {
         return new MutableRequest(
-            cookies: $cookies ?? $this->cookiesArray(),
-            files: $files ?? $this->filesArray(),
-            headers: $headers ?? $this->headersArray(),
-            input: $input ?? $this->inputArray(),
-            method: $method ?? $this->methodString(),
-            query: $query ?? $this->queryArray(),
-            server: $server ?? $this->serverArray(),
-            uploads: $uploads ?? $this->uploadsArray(),
-            url: $url ?? $this->newUrl(),
-            body: $body ?? $this->bodyResource(),
+            cookies: $cookies ?? [],
+            files: $files ?? [],
+            headers: $headers ?? [],
+            input: $input ?? [],
+            method: $method ?? '',
+            query: $query ?? [],
+            server: $server ?? [],
+            uploads: $uploads ?? [],
+            url: $url ?? $this->newRequestUrl(),
+            body: $body,
         );
     }
 
     /**
      * @inheritdoc
+     * @return MutableRequestUpload
      */
-    public function newUpload(
+    public function newRequestUpload(
         string $tmpName,
         int $error,
         ?string $name = null,
@@ -54,9 +54,9 @@ class MutableFactory extends RequestFactory
         ?string $type = null,
         ?int $size = null,
         mixed $body = null,
-    ) : Upload
+    ) : RequestUpload
     {
-        return new MutableUpload(
+        return new MutableRequestUpload(
             tmpName: $tmpName,
             error: $error,
             name: $name,
@@ -70,7 +70,7 @@ class MutableFactory extends RequestFactory
     /**
      * @return MutableUrl
      */
-    public function newUrl(
+    public function newRequestUrl(
         ?string $scheme = null,
         ?string $host = null,
         ?int $port = null,
@@ -81,26 +81,15 @@ class MutableFactory extends RequestFactory
         ?string $fragment = null,
     ) : Url
     {
-        $default = $this->urlArray();
-
         return new MutableUrl(
-            scheme: $scheme ?? $default['scheme'],
-            host: $host ?? $default['host'],
-            port: $port ?? $default['port'],
-            user: $user ?? $default['user'],
-            pass: $pass ?? $default['pass'],
-            path: $path ?? $default['path'],
-            query: $query ?? $default['query'],
-            fragment: $fragment ?? $default['fragment'],
+            scheme: $scheme,
+            host: $host,
+            port: $port,
+            user: $user,
+            pass: $pass,
+            path: $path,
+            query: $query,
+            fragment: $fragment,
         );
-    }
-
-    /**
-     * @inheritdoc
-     * @return MutableBody
-     */
-    public function newBody(mixed $body) : Body
-    {
-        return new MutableBody($body);
     }
 }
