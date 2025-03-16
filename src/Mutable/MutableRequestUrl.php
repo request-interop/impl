@@ -45,7 +45,7 @@ class MutableRequestUrl extends MutableUri implements RequestUrl
         string $scheme,
         string $host,
         ?int $port = null,
-        ?string $path = null,
+        string $path = '',
         ?string $query = null,
     ) {
         parent::__construct(

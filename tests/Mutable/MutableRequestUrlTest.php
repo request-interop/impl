@@ -17,7 +17,7 @@ class MutableRequestUrlTest extends RequestUrlTestCase
         string $scheme,
         string $host,
         ?int $port = null,
-        ?string $path = null,
+        string $path = '',
         ?string $query = null,
     ) : RequestUrl
     {
