@@ -1,22 +1,32 @@
 <?php
 declare(strict_types=1);
 
-namespace RequestInterop\Impl\Mutable;
+namespace RequestInterop\Impl;
 
-use RequestInterop\Interface\Request;
+use RequestInterop\Interface\RequestStruct;
 use RequestInterop\Interface\RequestTypeAliases;
+use StreamInterop\Impl\ReadonlyFileStream;
+use UploadInterop\Interface\UploadTypeAliases;
+use UriInterop\Impl\ReadonlyUri;
 
 /**
  * @phpstan-import-type cookies_array from RequestTypeAliases
- * @phpstan-import-type files_array from RequestTypeAliases
+ *
+ * @phpstan-import-type files_array from UploadTypeAliases
+ *
  * @phpstan-import-type headers_array from RequestTypeAliases
+ *
  * @phpstan-import-type input_array from RequestTypeAliases
+ *
  * @phpstan-import-type method_string from RequestTypeAliases
+ *
  * @phpstan-import-type query_array from RequestTypeAliases
+ *
  * @phpstan-import-type server_array from RequestTypeAliases
- * @phpstan-import-type uploads_array from RequestTypeAliases
+ *
+ * @phpstan-import-type uploads_array from UploadTypeAliases
  */
-class MutableRequest implements Request
+readonly class Request implements RequestStruct
 {
     /**
      * @param cookies_array $cookies
@@ -29,6 +39,7 @@ class MutableRequest implements Request
      * @param uploads_array $uploads
      */
     public function __construct(
+        public ReadonlyFileStream $body,
         public array $cookies,
         public array $files,
         public array $headers,
@@ -37,8 +48,7 @@ class MutableRequest implements Request
         public array $query,
         public array $server,
         public array $uploads,
-        public MutableRequestUrl $url,
-        public MutableRequestBody $body,
+        public ReadonlyUri $uri,
     ) {
     }
 }

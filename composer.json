@@ -15,12 +15,14 @@
         }
     },
     "require": {
-        "php": "^8.4",
+        "php": ">=8.4",
         "request-interop/interface": "1.x@dev",
         "stream-interop/interface": "1.x@dev",
         "stream-interop/impl": "1.x@dev",
         "uri-interop/interface": "1.x@dev",
-        "uri-interop/impl": "1.x@dev"
+        "uri-interop/impl": "1.x@dev",
+        "upload-interop/interface": "1.x@dev",
+        "upload-interop/impl": "1.x@dev"
     },
     "autoload-dev": {
         "psr-4": {
@@ -30,8 +32,7 @@
     "require-dev": {
         "pds/skeleton": "^1.0",
         "phpstan/phpstan": "^2.0",
-        "phpunit/phpunit": "^11.0",
-        "nyholm/psr7": "^1.0"
+        "phpunit/phpunit": "^11.0"
     },
     "scripts": {
         "analyze": "./vendor/bin/phpstan analyze -c phpstan.neon",
