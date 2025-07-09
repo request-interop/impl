@@ -55,30 +55,6 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceOf(ReadonlyFileStream::class, $actual);
     }
 
-    public function testCookies() : void
-    {
-        $_COOKIE = ['foo' => 'bar'];
-        $actual = $this->newRequestFactory()->cookies();
-        $this->assertSame($_COOKIE, $actual);
-    }
-
-    public function testFiles() : void
-    {
-        $_FILES = [
-            'foo1' => [
-                'error' => 0,
-                'name' => '',
-                'full_path' => '',
-                'size' => 0,
-                'tmp_name' => '',
-                'type' => '',
-            ],
-        ];
-
-        $actual = $this->newRequestFactory()->files();
-        $this->assertSame($_FILES, $actual);
-    }
-
     public function testHeaders() : void
     {
         $server = [
@@ -181,20 +157,6 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         $this->expectException(RequestException::class);
         $this->expectExceptionMessage('Could not determine HTTP method.');
         $factory->method(server: [], headers: []);
-    }
-
-    public function testQuery() : void
-    {
-        $_GET = ['foo' => 'bar'];
-        $actual = $this->newRequestFactory()->query();
-        $this->assertSame($_GET, $actual);
-    }
-
-    public function testServer() : void
-    {
-        $_SERVER = ['FOO' => 'bar'];
-        $actual = $this->newRequestFactory()->server();
-        $this->assertSame($_SERVER, $actual);
     }
 
     public function testUploads(): void

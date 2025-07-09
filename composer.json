@@ -17,8 +17,8 @@
     "require": {
         "php": ">=8.4",
         "request-interop/interface": "1.x@dev",
-        "stream-interop/interface": "1.x@dev",
-        "stream-interop/impl": "1.x@dev",
+        "stream-interop/interface": "^1.0",
+        "stream-interop/impl": "^1.0",
         "uri-interop/interface": "1.x@dev",
         "uri-interop/impl": "1.x@dev",
         "upload-interop/interface": "1.x@dev",

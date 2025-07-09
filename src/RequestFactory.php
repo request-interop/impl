@@ -8,6 +8,7 @@ use RequestInterop\Interface\RequestStructFactory;
 use RequestInterop\Interface\RequestTypeAliases;
 use StreamInterop\Impl\ReadonlyFileStream;
 use StreamInterop\Interface\StringableStream;
+use UploadInterop\Interface\UploadStructFactory;
 use UploadInterop\Impl\UploadFactory;
 use UploadInterop\Interface\UploadTypeAliases;
 use UriInterop\Impl\ReadonlyUri;
@@ -32,48 +33,10 @@ use UriInterop\Interface\UriStruct;
  */
 class RequestFactory implements RequestStructFactory
 {
-    /**
-     * @var cookies_array
-     */
-    protected array $_cookie;
-
-    /**
-     * @var files_array
-     */
-    protected array $_files;
-
-    /**
-     * @var query_array
-     */
-    protected array $_get;
-
-    /**
-     * @var input_array
-     */
-    protected array $_post;
-
-    /**
-     * @var server_array
-     */
-    protected array $_server;
-
     public function __construct(
-        protected UploadFactory $uploadFactory = new UploadFactory(),
+        protected RequestGlobals $requestGlobals = new RequestGlobals(),
+        protected UploadStructFactory $uploadFactory = new UploadFactory(),
     ) {
-        /** @var cookies_array $_COOKIE */
-        $this->_cookie = $_COOKIE;
-
-        /** @var files_array $_FILES */
-        $this->_files = $_FILES;
-
-        /** @var query_array $_GET */
-        $this->_get = $_GET;
-
-        /** @var input_array $_POST */
-        $this->_post = $_POST;
-
-        /** @var server_array $_SERVER */
-        $this->_server = $_SERVER;
     }
 
     /**
@@ -96,10 +59,10 @@ class RequestFactory implements RequestStructFactory
     ) : RequestStruct
     {
         // no dependencies
-        $cookies ??= $this->cookies();
-        $files ??= $this->files();
-        $query ??= $this->query();
-        $server ??= $this->server();
+        $cookies ??= $this->requestGlobals->_COOKIE;
+        $files ??= $this->requestGlobals->_FILES;
+        $query ??= $this->requestGlobals->_GET;
+        $server ??= $this->requestGlobals->_SERVER;
 
         // one dependency
         $body ??= $this->body('php://input');
@@ -128,42 +91,11 @@ class RequestFactory implements RequestStructFactory
 
     /**
      * @param string|resource $spec
+     * @return ReadonlyFileStream
      */
-    public function body(mixed $spec) : ReadonlyFileStream
+    public function body(mixed $spec) : StringableStream
     {
         return new ReadonlyFileStream($spec);
-    }
-
-    /**
-     * @return cookies_array
-     */
-    public function cookies() : array
-    {
-        return $this->_cookie;
-    }
-
-    /**
-     * @return query_array
-     */
-    public function query() : array
-    {
-        return $this->_get;
-    }
-
-    /**
-     * @return server_array
-     */
-    public function server() : array
-    {
-        return $this->_server;
-    }
-
-    /**
-     * @return files_array
-     */
-    public function files() : array
-    {
-        return $this->_files;
     }
 
     /**
@@ -205,7 +137,7 @@ class RequestFactory implements RequestStructFactory
             'application/json' => $this->inputTypeJson($body),
             'application/xml' => $this->inputTypeXml($body),
             'text/xml' => $this->inputTypeXml($body),
-            default => $this->_post,
+            default => $this->requestGlobals->_POST,
         };
     }
 
@@ -237,6 +169,7 @@ class RequestFactory implements RequestStructFactory
      */
     public function inputTypeJson(StringableStream $body) : array
     {
+        // THROW ON ERROR?
         /** @var ?input_array $input */
         $input = json_decode((string) $body, true, 512, JSON_BIGINT_AS_STRING);
         return is_array($input) ? $input : [];
@@ -248,7 +181,9 @@ class RequestFactory implements RequestStructFactory
     public function inputTypeXml(StringableStream $body) : array
     {
         $oldInternalErrors = libxml_use_internal_errors(true);
+        libxml_clear_errors();
         $xml = simplexml_load_string((string) $body);
+        // capture errors, if any, and throw
         libxml_clear_errors();
         libxml_use_internal_errors($oldInternalErrors);
         $json = (string) json_encode($xml);
@@ -405,11 +340,13 @@ class RequestFactory implements RequestStructFactory
         if (isset($server['REQUEST_URI'])) {
             $parts = explode('?', $server['REQUEST_URI'], 2);
             $path = $parts[0];
-            $query = $parts[1] ?? null;
-            $query = ($server['QUERY_STRING'] !== null) ? $server['QUERY_STRING'] : $query;
+            $query = $server['QUERY_STRING'] ?? $parts[1] ?? null;
             return ['path' => $path, 'query' => $query];
         }
 
-        return ['path' => (string) $server['PHP_SELF'], 'query' => $server['QUERY_STRING']];
+        return [
+            'path' => (string) $server['PHP_SELF'],
+            'query' => $server['QUERY_STRING']
+        ];
     }
 }
