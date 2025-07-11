@@ -16,7 +16,7 @@ use UriInterop\Impl\ReadonlyUri;
  *
  * @phpstan-import-type headers_array from RequestTypeAliases
  *
- * @phpstan-import-type input_array from RequestTypeAliases
+ * @phpstan-import-type body_array from RequestTypeAliases
  *
  * @phpstan-import-type method_string from RequestTypeAliases
  *
@@ -29,26 +29,24 @@ use UriInterop\Impl\ReadonlyUri;
 readonly class Request implements RequestStruct
 {
     /**
+     * @param body_array $body
      * @param cookies_array $cookies
-     * @param files_array $files
      * @param headers_array $headers
-     * @param input_array $input
      * @param method_string $method
      * @param query_array $query
      * @param server_array $server
      * @param uploads_array $uploads
      */
     public function __construct(
-        public ReadonlyFileStream $body,
+        public array $body,
         public array $cookies,
-        public array $files,
         public array $headers,
-        public array $input,
+        public ReadonlyFileStream $input,
         public string $method,
         public array $query,
         public array $server,
         public array $uploads,
-        public ReadonlyUri $uri,
+        public RequestUri $uri,
     ) {
     }
 }

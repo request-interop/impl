@@ -11,7 +11,7 @@ use UploadInterop\Interface\UploadTypeAliases;
  *
  * @phpstan-import-type files_array from UploadTypeAliases
  *
- * @phpstan-import-type input_array from RequestTypeAliases
+ * @phpstan-import-type body_array from RequestTypeAliases
  *
  * @phpstan-import-type query_array from RequestTypeAliases
  *
@@ -28,11 +28,14 @@ class RequestGlobals
     /** @var files_array */
     public readonly array $_FILES;
 
-    /** @var input_array */
+    /** @var body_array */
     public readonly array $_POST;
 
     /** @var server_array */
     public readonly array $_SERVER;
+
+    /** @var string|resource */
+    public readonly mixed $inputStream;
 
     public function __construct()
     {
@@ -45,10 +48,12 @@ class RequestGlobals
         /** @var files_array $_FILES */
         $this->_FILES = $_FILES;
 
-        /** @var input_array $_POST */
+        /** @var body_array $_POST */
         $this->_POST = $_POST;
 
         /** @var server_array $_SERVER */
         $this->_SERVER = $_SERVER;
+
+        $this->inputStream = 'php://input';
     }
 }

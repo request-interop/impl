@@ -14,7 +14,7 @@ use UriInterop\Impl\ReadonlyUri;
 /**
  * @phpstan-import-type cookies_array from RequestTypeAliases
  * @phpstan-import-type files_array from UploadTypeAliases
- * @phpstan-import-type input_array from RequestTypeAliases
+ * @phpstan-import-type body_array from RequestTypeAliases
  * @phpstan-import-type query_array from RequestTypeAliases
  * @phpstan-import-type server_array from RequestTypeAliases
  * @phpstan-import-type uploads_array from UploadTypeAliases
@@ -49,9 +49,9 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         $this->assertInstanceof(Request::class, $actual);
     }
 
-    public function testBody() : void
+    public function testInput() : void
     {
-        $actual = $this->newRequestFactory()->body('php://input');
+        $actual = $this->newRequestFactory()->input('php://input');
         $this->assertInstanceOf(ReadonlyFileStream::class, $actual);
     }
 
@@ -76,30 +76,30 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($expect, $actual);
     }
 
-    public function testInput() : void
+    public function testBody() : void
     {
         $_POST = ['foo' => 'bar'];
         $factory = $this->newRequestFactory();
 
-        $actual = $factory->input(
+        $actual = $factory->body(
             headers: [],
-            body: $factory->body('php://input'),
+            input: $factory->input('php://input'),
         );
 
         $this->assertSame($_POST, $actual);
     }
 
-    public function testInputType() : void
+    public function testBodyType() : void
     {
         $factory = $this->newRequestFactory();
 
-        $actual = $factory->inputType(
+        $actual = $factory->bodyType(
             headers: [],
         );
 
         $this->assertNull($actual);
 
-        $actual = $factory->inputType(
+        $actual = $factory->bodyType(
             headers: ['content-type' => 'TEXT/plain']
         );
 
@@ -107,14 +107,14 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($expect, $actual);
     }
 
-    public function testInputTypeJson() : void
+    public function testBodyTypeJson() : void
     {
         $factory = $this->newRequestFactory();
         $expect = ['foo' => 'bar'];
 
-        $actual = $this->newRequestFactory()->input(
+        $actual = $this->newRequestFactory()->body(
             headers: ['content-type' => 'application/json'],
-            body: $factory->body(
+            input: $factory->input(
                 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.json'
             ),
         );
@@ -122,23 +122,23 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         $this->assertSame($expect, $actual);
     }
 
-    public function testInputTypeXml() : void
+    public function testBodyTypeXml() : void
     {
         $factory = $this->newRequestFactory();
         $expect = ['foo' => 'bar'];
 
-        $actual = $this->newRequestFactory()->input(
+        $actual = $this->newRequestFactory()->body(
             headers: ['content-type' => 'application/xml'],
-            body: $factory->body(
+            input: $factory->input(
                 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml'
             ),
         );
 
         $this->assertSame($expect, $actual);
 
-        $actual = $this->newRequestFactory()->input(
+        $actual = $this->newRequestFactory()->body(
             headers: ['content-type' => 'text/xml'],
-            body: $factory->body(
+            input: $factory->input(
                 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml'
             ),
         );

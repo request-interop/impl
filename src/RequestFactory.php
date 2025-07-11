@@ -21,7 +21,7 @@ use UriInterop\Interface\UriStruct;
  *
  * @phpstan-import-type headers_array from RequestTypeAliases
  *
- * @phpstan-import-type input_array from RequestTypeAliases
+ * @phpstan-import-type body_array from RequestTypeAliases
  *
  * @phpstan-import-type method_string from RequestTypeAliases
  *
@@ -42,16 +42,15 @@ class RequestFactory implements RequestStructFactory
 
     /**
      * @inheritdoc
-     * @param ReadonlyUri $uri
-     * @param ReadonlyFileStream $body
+     * @param ReadonlyFileStream $input
+     * @param RequestUri $uri
      * @return Request
      */
     public function newRequest(
-        ?StringableStream $body = null,
+        ?array $body = null,
         ?array $cookies = null,
-        ?array $files = null,
         ?array $headers = null,
-        ?array $input = null,
+        ?StringableStream $input = null,
         ?string $method = null,
         ?array $query = null,
         ?array $server = null,
@@ -60,25 +59,24 @@ class RequestFactory implements RequestStructFactory
     ) : RequestStruct
     {
         // no dependencies
-        $cookies ??= $this->requestGlobals->_COOKIE;
-        $files ??= $this->requestGlobals->_FILES;
-        $query ??= $this->requestGlobals->_GET;
-        $server ??= $this->requestGlobals->_SERVER;
+        $cookies ??= $this->cookies();
+        $query ??= $this->query();
+        $server ??= $this->server();
 
         // one dependency
-        $body ??= $this->body('php://input');
+        $input ??= $this->input($this->requestGlobals->inputStream);
         $headers ??= $this->headers($server);
-        $uploads ??= $this->uploads($files);
+        $uploads ??= $this->uploads($this->requestGlobals->_FILES);
         $uri ??= $this->uri($server);
 
         // two dependencies
         $method ??= $this->method($server, $headers);
-        $input ??= $this->input($headers, $body);
+        $body ??= $this->body($headers, $input);
 
         // instantiate
         return new Request(
+            body: $body,
             cookies: $cookies,
-            files: $files,
             headers: $headers,
             input: $input,
             method: $method,
@@ -86,17 +84,80 @@ class RequestFactory implements RequestStructFactory
             server: $server,
             uploads: $uploads,
             uri: $uri,
-            body: $body,
         );
     }
 
     /**
-     * @param string|resource $spec
-     * @return ReadonlyFileStream
+     * @param headers_array $headers
+     * @return body_array
      */
-    public function body(mixed $spec) : StringableStream
+    public function body(array $headers, StringableStream $input) : array
     {
-        return new ReadonlyFileStream($spec);
+        return match($this->bodyType($headers)) {
+            'application/json' => $this->bodyTypeJson($input),
+            'application/xml' => $this->bodyTypeXml($input),
+            'text/xml' => $this->bodyTypeXml($input),
+            default => $this->requestGlobals->_POST,
+        };
+    }
+
+    /**
+     * @param headers_array $headers
+     */
+    public function bodyType(array $headers) : ?string
+    {
+        $type = null;
+
+        if (! isset($headers['content-type'])) {
+            return $type;
+        }
+
+        /** @var string[] */
+        $parts = explode(';', (string) $headers['content-type']);
+        $part = (string) array_shift($parts);
+        $regex = '/^[!#$%&\'*+.^_`|~0-9A-Za-z-]+\/[!#$%&\'*+.^_`|~0-9A-Za-z-]+$/';
+
+        if (preg_match($regex, $part) === 1) {
+            $type = strtolower($part);
+        }
+
+        return $type;
+    }
+
+    /**
+     * @return body_array
+     */
+    public function bodyTypeJson(StringableStream $input) : array
+    {
+        // THROW ON ERROR?
+        /** @var ?body_array $body */
+        $body = json_decode((string) $input, true, 512, JSON_BIGINT_AS_STRING);
+        return is_array($body) ? $body : [];
+    }
+
+    /**
+     * @return body_array
+     */
+    public function bodyTypeXml(StringableStream $input) : array
+    {
+        $oldInternalErrors = libxml_use_internal_errors(true);
+        libxml_clear_errors();
+        $xml = simplexml_load_string((string) $input);
+        libxml_clear_errors();
+        libxml_use_internal_errors($oldInternalErrors);
+        $json = (string) json_encode($xml);
+
+        /** @var ?body_array $body */
+        $body = json_decode($json, true, 512, JSON_BIGINT_AS_STRING);
+        return is_array($body) ? $body : [];
+    }
+
+    /**
+     * @return cookies_array
+     */
+    public function cookies() : array
+    {
+        return $this->requestGlobals->_COOKIE;
     }
 
     /**
@@ -129,69 +190,12 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @param headers_array $headers
-     * @return input_array
+     * @param string|resource $spec
+     * @return ReadonlyFileStream
      */
-    public function input(array $headers, StringableStream $body) : array
+    public function input(mixed $spec) : StringableStream
     {
-        return match($this->inputType($headers)) {
-            'application/json' => $this->inputTypeJson($body),
-            'application/xml' => $this->inputTypeXml($body),
-            'text/xml' => $this->inputTypeXml($body),
-            default => $this->requestGlobals->_POST,
-        };
-    }
-
-    /**
-     * @param headers_array $headers
-     */
-    public function inputType(array $headers) : ?string
-    {
-        $type = null;
-
-        if (! isset($headers['content-type'])) {
-            return $type;
-        }
-
-        /** @var string[] */
-        $parts = explode(';', (string) $headers['content-type']);
-        $part = (string) array_shift($parts);
-        $regex = '/^[!#$%&\'*+.^_`|~0-9A-Za-z-]+\/[!#$%&\'*+.^_`|~0-9A-Za-z-]+$/';
-
-        if (preg_match($regex, $part) === 1) {
-            $type = strtolower($part);
-        }
-
-        return $type;
-    }
-
-    /**
-     * @return input_array
-     */
-    public function inputTypeJson(StringableStream $body) : array
-    {
-        // THROW ON ERROR?
-        /** @var ?input_array $input */
-        $input = json_decode((string) $body, true, 512, JSON_BIGINT_AS_STRING);
-        return is_array($input) ? $input : [];
-    }
-
-    /**
-     * @return input_array
-     */
-    public function inputTypeXml(StringableStream $body) : array
-    {
-        $oldInternalErrors = libxml_use_internal_errors(true);
-        libxml_clear_errors();
-        $xml = simplexml_load_string((string) $body);
-        // capture errors, if any, and throw
-        libxml_clear_errors();
-        libxml_use_internal_errors($oldInternalErrors);
-        $json = (string) json_encode($xml);
-
-        /** @var ?input_array $input */
-        $input = json_decode($json, true, 512, JSON_BIGINT_AS_STRING);
-        return is_array($input) ? $input : [];
+        return new ReadonlyFileStream($spec);
     }
 
     /**
@@ -217,6 +221,22 @@ class RequestFactory implements RequestStructFactory
         }
 
         return strtoupper((string) $method);
+    }
+
+    /**
+     * @return query_array
+     */
+    public function query() : array
+    {
+        return $this->requestGlobals->_GET;
+    }
+
+    /**
+     * @return server_array
+     */
+    public function server() : array
+    {
+        return $this->requestGlobals->_SERVER;
     }
 
     /**
