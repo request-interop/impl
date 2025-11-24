@@ -6,12 +6,12 @@ namespace RequestInterop\Impl;
 use RequestInterop\Interface\RequestTypeAliases;
 
 /**
- * @phpstan-import-type server_array from RequestTypeAliases
+ * @phpstan-import-type request_server_array from RequestTypeAliases
  */
 class RequestUriFactory
 {
     /**
-     * @param server_array $server
+     * @param request_server_array $server
      */
     public function newRequestUri(array $server) : RequestUri
     {
@@ -23,7 +23,7 @@ class RequestUriFactory
     }
 
     /**
-     * @param server_array $server
+     * @param request_server_array $server
      * @return array{scheme:non-empty-string}
      */
     public function getScheme(array $server) : array
@@ -40,7 +40,7 @@ class RequestUriFactory
     }
 
     /**
-     * @param server_array $server
+     * @param request_server_array $server
      * @return array{host:string, port:?int}
      */
     public function getHostAndPort(array $server) : array
@@ -96,7 +96,7 @@ class RequestUriFactory
     }
 
     /**
-     * @param server_array $server
+     * @param request_server_array $server
      * @return array{path:string, query:?string}
      */
     public function getPathAndQuery(array $server) : array

@@ -12,14 +12,14 @@ use UploadInterop\Interface\UploadTypeAliases;
 use UriInterop\Impl\ReadonlyUri;
 
 /**
- * @phpstan-import-type cookies_array from RequestTypeAliases
- * @phpstan-import-type files_array from UploadTypeAliases
- * @phpstan-import-type body_array from RequestTypeAliases
- * @phpstan-import-type query_array from RequestTypeAliases
- * @phpstan-import-type server_array from RequestTypeAliases
- * @phpstan-import-type uploads_array from UploadTypeAliases
- * @phpstan-import-type headers_array from RequestTypeAliases
- * @phpstan-import-type method_string from RequestTypeAliases
+ * @phpstan-import-type request_cookies_array from RequestTypeAliases
+ * @phpstan-import-type upload_files_array from UploadTypeAliases
+ * @phpstan-import-type request_body_array from RequestTypeAliases
+ * @phpstan-import-type request_query_array from RequestTypeAliases
+ * @phpstan-import-type request_server_array from RequestTypeAliases
+ * @phpstan-import-type upload_struct_array from UploadTypeAliases
+ * @phpstan-import-type request_headers_array from RequestTypeAliases
+ * @phpstan-import-type request_method_string from RequestTypeAliases
  */
 #[\PHPUnit\Framework\Attributes\BackupGlobals(true)]
 class RequestFactoryTest extends \PHPUnit\Framework\TestCase

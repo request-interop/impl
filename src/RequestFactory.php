@@ -11,25 +11,23 @@ use StreamInterop\Interface\StringableStream;
 use UploadInterop\Interface\UploadStructFactory;
 use UploadInterop\Impl\UploadFactory;
 use UploadInterop\Interface\UploadTypeAliases;
-use UriInterop\Impl\ReadonlyUri;
-use UriInterop\Interface\UriStruct;
 
 /**
- * @phpstan-import-type cookies_array from RequestTypeAliases
+ * @phpstan-import-type request_cookies_array from RequestTypeAliases
  *
- * @phpstan-import-type files_array from UploadTypeAliases
+ * @phpstan-import-type request_headers_array from RequestTypeAliases
  *
- * @phpstan-import-type headers_array from RequestTypeAliases
+ * @phpstan-import-type request_body_array from RequestTypeAliases
  *
- * @phpstan-import-type body_array from RequestTypeAliases
+ * @phpstan-import-type request_method_string from RequestTypeAliases
  *
- * @phpstan-import-type method_string from RequestTypeAliases
+ * @phpstan-import-type request_query_array from RequestTypeAliases
  *
- * @phpstan-import-type query_array from RequestTypeAliases
+ * @phpstan-import-type request_server_array from RequestTypeAliases
  *
- * @phpstan-import-type server_array from RequestTypeAliases
+ * @phpstan-import-type upload_files_array from UploadTypeAliases
  *
- * @phpstan-import-type uploads_array from UploadTypeAliases
+ * @phpstan-import-type upload_struct_array from UploadTypeAliases
  */
 class RequestFactory implements RequestStructFactory
 {
@@ -42,36 +40,24 @@ class RequestFactory implements RequestStructFactory
 
     /**
      * @inheritdoc
-     * @param ReadonlyFileStream $input
-     * @param RequestUri $uri
      * @return Request
      */
-    public function newRequest(
-        ?array $body = null,
-        ?array $cookies = null,
-        ?array $headers = null,
-        ?StringableStream $input = null,
-        ?string $method = null,
-        ?array $query = null,
-        ?array $server = null,
-        ?array $uploads = null,
-        ?UriStruct $uri = null,
-    ) : RequestStruct
+    public function newRequest() : RequestStruct
     {
         // no dependencies
-        $cookies ??= $this->cookies();
-        $query ??= $this->query();
-        $server ??= $this->server();
+        $cookies = $this->cookies();
+        $query = $this->query();
+        $server = $this->server();
 
         // one dependency
-        $input ??= $this->input($this->requestGlobals->inputStream);
-        $headers ??= $this->headers($server);
-        $uploads ??= $this->uploads($this->requestGlobals->_FILES);
-        $uri ??= $this->uri($server);
+        $input = $this->input($this->requestGlobals->inputStream);
+        $headers = $this->headers($server);
+        $uploads = $this->uploads($this->requestGlobals->_FILES);
+        $uri = $this->uri($server);
 
         // two dependencies
-        $method ??= $this->method($server, $headers);
-        $body ??= $this->body($headers, $input);
+        $method = $this->method($server, $headers);
+        $body = $this->body($headers, $input);
 
         // instantiate
         return new Request(
@@ -88,8 +74,8 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @param headers_array $headers
-     * @return body_array
+     * @param request_headers_array $headers
+     * @return request_body_array
      */
     public function body(array $headers, StringableStream $input) : array
     {
@@ -102,7 +88,7 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @param headers_array $headers
+     * @param request_headers_array $headers
      */
     public function bodyType(array $headers) : ?string
     {
@@ -125,18 +111,18 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @return body_array
+     * @return request_body_array
      */
     public function bodyTypeJson(StringableStream $input) : array
     {
         // THROW ON ERROR?
-        /** @var ?body_array $body */
+        /** @var ?request_body_array $body */
         $body = json_decode((string) $input, true, 512, JSON_BIGINT_AS_STRING);
         return is_array($body) ? $body : [];
     }
 
     /**
-     * @return body_array
+     * @return request_body_array
      */
     public function bodyTypeXml(StringableStream $input) : array
     {
@@ -147,13 +133,13 @@ class RequestFactory implements RequestStructFactory
         libxml_use_internal_errors($oldInternalErrors);
         $json = (string) json_encode($xml);
 
-        /** @var ?body_array $body */
+        /** @var ?request_body_array $body */
         $body = json_decode($json, true, 512, JSON_BIGINT_AS_STRING);
         return is_array($body) ? $body : [];
     }
 
     /**
-     * @return cookies_array
+     * @return request_cookies_array
      */
     public function cookies() : array
     {
@@ -161,8 +147,8 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @param server_array $server
-     * @return headers_array
+     * @param request_server_array $server
+     * @return request_headers_array
      */
     public function headers(array $server) : array
     {
@@ -199,9 +185,9 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @param server_array $server
-     * @param headers_array $headers
-     * @return method_string
+     * @param request_server_array $server
+     * @param request_headers_array $headers
+     * @return request_method_string
      */
     public function method(array $server, array $headers) : string
     {
@@ -224,7 +210,7 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @return query_array
+     * @return request_query_array
      */
     public function query() : array
     {
@@ -232,7 +218,7 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @return server_array
+     * @return request_server_array
      */
     public function server() : array
     {
@@ -240,8 +226,8 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @param files_array $files
-     * @return uploads_array
+     * @param upload_files_array $files
+     * @return upload_struct_array
      */
     public function uploads(array $files) : array
     {
@@ -249,7 +235,7 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @param server_array $server
+     * @param request_server_array $server
      */
     public function uri(array $server) : RequestUri
     {
