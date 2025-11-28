@@ -8,34 +8,27 @@ use UploadInterop\Interface\UploadTypeAliases;
 
 /**
  * @phpstan-import-type request_cookies_array from RequestTypeAliases
- *
  * @phpstan-import-type request_body_array from RequestTypeAliases
- *
  * @phpstan-import-type request_query_array from RequestTypeAliases
- *
  * @phpstan-import-type request_server_array from RequestTypeAliases
- *
  * @phpstan-import-type upload_files_array from UploadTypeAliases
  */
-class RequestGlobals
+readonly class RequestGlobals
 {
     /** @var request_cookies_array */
-    public readonly array $_COOKIE;
+    public array $_COOKIE;
 
     /** @var request_query_array */
-    public readonly array $_GET;
+    public array $_GET;
 
     /** @var upload_files_array */
-    public readonly array $_FILES;
+    public array $_FILES;
 
     /** @var request_body_array */
-    public readonly array $_POST;
+    public array $_POST;
 
     /** @var request_server_array */
-    public readonly array $_SERVER;
-
-    /** @var string|resource */
-    public readonly mixed $inputStream;
+    public array $_SERVER;
 
     public function __construct()
     {
@@ -53,7 +46,5 @@ class RequestGlobals
 
         /** @var request_server_array $_SERVER */
         $this->_SERVER = $_SERVER;
-
-        $this->inputStream = 'php://input';
     }
 }

@@ -5,11 +5,9 @@ namespace RequestInterop\Impl;
 
 use RequestInterop\Impl\RequestFactory;
 use RequestInterop\Interface\RequestTypeAliases;
-use RequestInterop\Interface\RequestStruct;
 use StreamInterop\Impl\ReadonlyFileStream;
 use UploadInterop\Impl\Upload;
 use UploadInterop\Interface\UploadTypeAliases;
-use UriInterop\Impl\ReadonlyUri;
 
 /**
  * @phpstan-import-type request_cookies_array from RequestTypeAliases
@@ -17,7 +15,7 @@ use UriInterop\Impl\ReadonlyUri;
  * @phpstan-import-type request_body_array from RequestTypeAliases
  * @phpstan-import-type request_query_array from RequestTypeAliases
  * @phpstan-import-type request_server_array from RequestTypeAliases
- * @phpstan-import-type upload_struct_array from UploadTypeAliases
+ * @phpstan-import-type upload_structs_array from UploadTypeAliases
  * @phpstan-import-type request_headers_array from RequestTypeAliases
  * @phpstan-import-type request_method_string from RequestTypeAliases
  */
@@ -30,34 +28,30 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         $_FILES = [];
         $_GET = [];
         $_POST = [];
-        $_SERVER = [];
+        $_SERVER = [
+            'REQUEST_METHOD' => 'GET',
+            'SERVER_ADDR' => '127.0.0.1',
+        ];
     }
 
-    protected function newRequestFactory() : RequestFactory
+    protected function newRequest(?ReadonlyFileStream $bodyStream = null) : Request
     {
-        return new RequestFactory();
+        $factory = $bodyStream
+            ? new RequestFactory(bodyStream: $bodyStream)
+            : new RequestFactory();
+
+        return $factory->newRequest();
     }
 
     public function testNewRequest() : void
     {
-        $_SERVER = [
-            'REQUEST_METHOD' => 'FAKE',
-            'SERVER_ADDR' => '127.0.0.1',
-        ];
-
-        $actual = $this->newRequestFactory()->newRequest();
+        $actual = $this->newRequest();
         $this->assertInstanceof(Request::class, $actual);
-    }
-
-    public function testInput() : void
-    {
-        $actual = $this->newRequestFactory()->input('php://input');
-        $this->assertInstanceOf(ReadonlyFileStream::class, $actual);
     }
 
     public function testHeaders() : void
     {
-        $server = [
+        $_SERVER += [
             'HTTP_HOST' => 'example.com',
             'HTTP_FOO_BAR_BAZ' => 'dib,zim,gir',
             'NON_HTTP_HEADER' => 'should not show',
@@ -72,96 +66,82 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
             'content-type' => 'text/plain',
         ];
 
-        $actual = $this->newRequestFactory()->headers($server);
-        $this->assertSame($expect, $actual);
+        $actual = $this->newRequest();
+        $this->assertSame($expect, $actual->headers);
     }
 
     public function testBody() : void
     {
         $_POST = ['foo' => 'bar'];
-        $factory = $this->newRequestFactory();
-
-        $actual = $factory->body(
-            headers: [],
-            input: $factory->input('php://input'),
-        );
-
-        $this->assertSame($_POST, $actual);
-    }
-
-    public function testBodyType() : void
-    {
-        $factory = $this->newRequestFactory();
-
-        $actual = $factory->bodyType(
-            headers: [],
-        );
-
-        $this->assertNull($actual);
-
-        $actual = $factory->bodyType(
-            headers: ['content-type' => 'TEXT/plain']
-        );
-
-        $expect = 'text/plain';
-        $this->assertSame($expect, $actual);
+        $actual = $this->newRequest();
+        $this->assertSame($_POST, $actual->body);
     }
 
     public function testBodyTypeJson() : void
     {
-        $factory = $this->newRequestFactory();
+        $_SERVER += ['CONTENT_TYPE' => 'application/json'];
         $expect = ['foo' => 'bar'];
 
-        $actual = $this->newRequestFactory()->body(
-            headers: ['content-type' => 'application/json'],
-            input: $factory->input(
-                'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.json'
+        $actual = $this->newRequest(
+            bodyStream: new ReadonlyFileStream(
+                'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.json',
             ),
         );
 
-        $this->assertSame($expect, $actual);
+        $this->assertSame($expect, $actual->body);
     }
 
-    public function testBodyTypeXml() : void
+    public function testBodyTypeXml_application() : void
     {
-        $factory = $this->newRequestFactory();
+        $_SERVER += ['CONTENT_TYPE' => 'application/xml'];
         $expect = ['foo' => 'bar'];
 
-        $actual = $this->newRequestFactory()->body(
-            headers: ['content-type' => 'application/xml'],
-            input: $factory->input(
-                'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml'
+        $actual = $this->newRequest(
+            bodyStream: new ReadonlyFileStream(
+                'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml',
             ),
         );
 
-        $this->assertSame($expect, $actual);
+        $this->assertSame($expect, $actual->body);
 
-        $actual = $this->newRequestFactory()->body(
-            headers: ['content-type' => 'text/xml'],
-            input: $factory->input(
-                'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml'
+    }
+
+    public function testBodyTypeXml_text() : void
+    {
+        $_SERVER += ['CONTENT_TYPE' => 'text/xml'];
+        $expect = ['foo' => 'bar'];
+
+        $actual = $this->newRequest(
+            bodyStream: new ReadonlyFileStream(
+                'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml',
             ),
         );
 
-        $this->assertSame($expect, $actual);
+        $this->assertSame($expect, $actual->body);
     }
 
     public function testMethod() : void
     {
-        $factory = $this->newRequestFactory();
-        $server = ['REQUEST_METHOD' => 'POST'];
-        $headers = ['x-http-method-override' => 'patch'];
-        $actual = $factory->method($server, $headers);
-        $this->assertSame('PATCH', $actual);
+        $actual = $this->newRequest();
+        $this->assertSame('GET', $actual->method);
 
+        $_SERVER['HTTP_X_HTTP_METHOD_OVERRIDE'] = 'patch';
+        $actual = $this->newRequest();
+        $this->assertSame('GET', $actual->method);
+
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $actual = $this->newRequest();
+        $this->assertSame('PATCH', $actual->method);
+
+        unset($_SERVER['REQUEST_METHOD']);
         $this->expectException(RequestException::class);
         $this->expectExceptionMessage('Could not determine HTTP method.');
-        $factory->method(server: [], headers: []);
+        $this->newRequest();
     }
 
     public function testUploads(): void
     {
-        $files = [
+        $_FILES = [
             'foo1' => [
                 'error' => 0,
                 'name' => 'foo1',
@@ -172,15 +152,15 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
             ],
         ];
 
-        $actual = $this->newRequestFactory()->uploads($files);
-        $this->assertCount(1, $actual);
-        $this->assertInstanceOf(Upload::class, $actual['foo1']);
-        $this->assertSame('foo1', $actual['foo1']->name);
+        $actual = $this->newRequest();
+        $this->assertCount(1, $actual->uploads);
+        $this->assertInstanceOf(Upload::class, $actual->uploads['foo1']);
+        $this->assertSame('foo1', $actual->uploads['foo1']->name);
     }
 
     public function testUri() : void
     {
-        $actual = (array) $this->newRequestFactory()->uri(server: [
+        $_SERVER += [
             'HTTPS' => 'on',
             'HTTP_HOST' => 'example.com',
             'PHP_AUTH_USER' => 'watterson',
@@ -188,7 +168,7 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
             'SERVER_PORT' => '443',
             'REQUEST_URI' => '/foo/bar',
             'QUERY_STRING' => 'baz=dib',
-        ]);
+        ];
 
         $expect = [
             'queryParams' => [
@@ -204,6 +184,7 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
             'fragment' => null,
         ];
 
-        $this->assertSame($expect, $actual);
+        $actual = $this->newRequest();
+        $this->assertSame($expect, (array) $actual->uri);
     }
 }

@@ -7,7 +7,6 @@ use RequestInterop\Interface\RequestStruct;
 use RequestInterop\Interface\RequestTypeAliases;
 use StreamInterop\Impl\ReadonlyFileStream;
 use UploadInterop\Interface\UploadTypeAliases;
-use UriInterop\Impl\ReadonlyUri;
 
 /**
  * @phpstan-import-type request_cookies_array from RequestTypeAliases
@@ -24,7 +23,7 @@ use UriInterop\Impl\ReadonlyUri;
  *
  * @phpstan-import-type request_server_array from RequestTypeAliases
  *
- * @phpstan-import-type upload_struct_array from UploadTypeAliases
+ * @phpstan-import-type upload_structs_array from UploadTypeAliases
  */
 readonly class Request implements RequestStruct
 {
@@ -35,13 +34,13 @@ readonly class Request implements RequestStruct
      * @param request_method_string $method
      * @param request_query_array $query
      * @param request_server_array $server
-     * @param upload_struct_array $uploads
+     * @param upload_structs_array $uploads
      */
     public function __construct(
         public array $body,
         public array $cookies,
         public array $headers,
-        public ReadonlyFileStream $input,
+        public ReadonlyFileStream $bodyStream,
         public string $method,
         public array $query,
         public array $server,

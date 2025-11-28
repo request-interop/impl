@@ -14,28 +14,41 @@ use UploadInterop\Interface\UploadTypeAliases;
 
 /**
  * @phpstan-import-type request_cookies_array from RequestTypeAliases
- *
  * @phpstan-import-type request_headers_array from RequestTypeAliases
- *
  * @phpstan-import-type request_body_array from RequestTypeAliases
- *
  * @phpstan-import-type request_method_string from RequestTypeAliases
- *
  * @phpstan-import-type request_query_array from RequestTypeAliases
- *
  * @phpstan-import-type request_server_array from RequestTypeAliases
- *
  * @phpstan-import-type upload_files_array from UploadTypeAliases
- *
- * @phpstan-import-type upload_struct_array from UploadTypeAliases
+ * @phpstan-import-type upload_structs_array from UploadTypeAliases
  */
 class RequestFactory implements RequestStructFactory
 {
+    /** @var request_body_array */
+    protected array $body;
+
+    /** @var request_headers_array */
+    protected array $headers;
+
+    /** @var request_method_string */
+    protected string $method;
+
+    /** @var upload_structs_array */
+    protected array $uploads;
+
+    protected RequestUri $uri;
+
     public function __construct(
-        protected RequestGlobals $requestGlobals = new RequestGlobals(),
+        protected RequestGlobals $globals = new RequestGlobals(),
+        protected ReadonlyFileStream $bodyStream = new ReadonlyFileStream('php://input'),
         protected RequestUriFactory $requestUriFactory = new RequestUriFactory(),
         protected UploadStructFactory $uploadFactory = new UploadFactory(),
     ) {
+        $this->headers = $this->getHeaders();
+        $this->method = $this->getMethod();
+        $this->body = $this->getBody();
+        $this->uploads = $this->getUploads();
+        $this->uri = $this->getUri();
     }
 
     /**
@@ -44,62 +57,42 @@ class RequestFactory implements RequestStructFactory
      */
     public function newRequest() : RequestStruct
     {
-        // no dependencies
-        $cookies = $this->cookies();
-        $query = $this->query();
-        $server = $this->server();
-
-        // one dependency
-        $input = $this->input($this->requestGlobals->inputStream);
-        $headers = $this->headers($server);
-        $uploads = $this->uploads($this->requestGlobals->_FILES);
-        $uri = $this->uri($server);
-
-        // two dependencies
-        $method = $this->method($server, $headers);
-        $body = $this->body($headers, $input);
-
-        // instantiate
         return new Request(
-            body: $body,
-            cookies: $cookies,
-            headers: $headers,
-            input: $input,
-            method: $method,
-            query: $query,
-            server: $server,
-            uploads: $uploads,
-            uri: $uri,
+            body: $this->body,
+            bodyStream: $this->bodyStream,
+            cookies: $this->globals->_COOKIE,
+            headers: $this->headers,
+            method: $this->method,
+            query: $this->globals->_GET,
+            server: $this->globals->_SERVER,
+            uploads: $this->uploads,
+            uri: $this->uri,
         );
     }
 
     /**
-     * @param request_headers_array $headers
      * @return request_body_array
      */
-    public function body(array $headers, StringableStream $input) : array
+    protected function getBody() : array
     {
-        return match($this->bodyType($headers)) {
-            'application/json' => $this->bodyTypeJson($input),
-            'application/xml' => $this->bodyTypeXml($input),
-            'text/xml' => $this->bodyTypeXml($input),
-            default => $this->requestGlobals->_POST,
+        return match($this->getBodyType()) {
+            'application/json' => $this->getBodyTypeJson(),
+            'application/xml' => $this->getBodyTypeXml(),
+            'text/xml' => $this->getBodyTypeXml(),
+            default => $this->globals->_POST,
         };
     }
 
-    /**
-     * @param request_headers_array $headers
-     */
-    public function bodyType(array $headers) : ?string
+    protected function getBodyType() : ?string
     {
         $type = null;
 
-        if (! isset($headers['content-type'])) {
+        if (! isset($this->headers['content-type'])) {
             return $type;
         }
 
         /** @var string[] */
-        $parts = explode(';', (string) $headers['content-type']);
+        $parts = explode(';', (string) $this->headers['content-type']);
         $part = (string) array_shift($parts);
         $regex = '/^[!#$%&\'*+.^_`|~0-9A-Za-z-]+\/[!#$%&\'*+.^_`|~0-9A-Za-z-]+$/';
 
@@ -113,22 +106,22 @@ class RequestFactory implements RequestStructFactory
     /**
      * @return request_body_array
      */
-    public function bodyTypeJson(StringableStream $input) : array
+    protected function getBodyTypeJson() : array
     {
         // THROW ON ERROR?
         /** @var ?request_body_array $body */
-        $body = json_decode((string) $input, true, 512, JSON_BIGINT_AS_STRING);
+        $body = json_decode((string) $this->bodyStream, true, 512, JSON_BIGINT_AS_STRING);
         return is_array($body) ? $body : [];
     }
 
     /**
      * @return request_body_array
      */
-    public function bodyTypeXml(StringableStream $input) : array
+    protected function getBodyTypeXml() : array
     {
         $oldInternalErrors = libxml_use_internal_errors(true);
         libxml_clear_errors();
-        $xml = simplexml_load_string((string) $input);
+        $xml = simplexml_load_string((string) $this->bodyStream);
         libxml_clear_errors();
         libxml_use_internal_errors($oldInternalErrors);
         $json = (string) json_encode($xml);
@@ -139,23 +132,14 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @return request_cookies_array
-     */
-    public function cookies() : array
-    {
-        return $this->requestGlobals->_COOKIE;
-    }
-
-    /**
-     * @param request_server_array $server
      * @return request_headers_array
      */
-    public function headers(array $server) : array
+    protected function getHeaders() : array
     {
         $headers = [];
 
         // headers prefixed with HTTP_*
-        foreach ($server as $key => $val) {
+        foreach ($this->globals->_SERVER as $key => $val) {
             if (substr($key, 0, 5) === 'HTTP_') {
                 $key = substr($key, 5);
                 $key = str_replace('_', '-', strtolower($key));
@@ -164,40 +148,29 @@ class RequestFactory implements RequestStructFactory
         }
 
         // RFC 3875 headers not prefixed with HTTP_*
-        if (isset($server['CONTENT_LENGTH'])) {
-            $headers['content-length'] = (string) $server['CONTENT_LENGTH'];
+        if (isset($this->globals->_SERVER['CONTENT_LENGTH'])) {
+            $headers['content-length'] = (string) $this->globals->_SERVER['CONTENT_LENGTH'];
         }
 
-        if (isset($server['CONTENT_TYPE'])) {
-            $headers['content-type'] = (string) $server['CONTENT_TYPE'];
+        if (isset($this->globals->_SERVER['CONTENT_TYPE'])) {
+            $headers['content-type'] = (string) $this->globals->_SERVER['CONTENT_TYPE'];
         }
 
         return $headers;
     }
 
     /**
-     * @param string|resource $spec
-     * @return ReadonlyFileStream
-     */
-    public function input(mixed $spec) : StringableStream
-    {
-        return new ReadonlyFileStream($spec);
-    }
-
-    /**
-     * @param request_server_array $server
-     * @param request_headers_array $headers
      * @return request_method_string
      */
-    public function method(array $server, array $headers) : string
+    protected function getMethod() : string
     {
-        $method = strtoupper($server['REQUEST_METHOD'] ?? '');
+        $method = strtoupper($this->globals->_SERVER['REQUEST_METHOD'] ?? '');
 
         if (
             $method === 'POST'
-            && isset($headers['x-http-method-override'])
+            && isset($this->headers['x-http-method-override'])
         ) {
-            $method = $headers['x-http-method-override'];
+            $method = $this->headers['x-http-method-override'];
         }
 
         $method = trim($method);
@@ -210,35 +183,19 @@ class RequestFactory implements RequestStructFactory
     }
 
     /**
-     * @return request_query_array
+     * @return upload_structs_array
      */
-    public function query() : array
+    public function getUploads()
     {
-        return $this->requestGlobals->_GET;
+        return $this->uploadFactory->newUploadsFromFiles(
+            $this->globals->_FILES,
+        );
     }
 
-    /**
-     * @return request_server_array
-     */
-    public function server() : array
+    public function getUri() : RequestUri
     {
-        return $this->requestGlobals->_SERVER;
-    }
-
-    /**
-     * @param upload_files_array $files
-     * @return upload_struct_array
-     */
-    public function uploads(array $files) : array
-    {
-        return $this->uploadFactory->newUploadsFromFiles($files);
-    }
-
-    /**
-     * @param request_server_array $server
-     */
-    public function uri(array $server) : RequestUri
-    {
-        return $this->requestUriFactory->newRequestUri($server);
+        return $this->requestUriFactory->newRequestUri(
+            $this->globals->_SERVER,
+        );
     }
 }
