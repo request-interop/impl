@@ -6,7 +6,6 @@ namespace RequestInterop\Impl;
 use RequestInterop\Interface\RequestStruct;
 use RequestInterop\Interface\RequestStructFactory;
 use RequestInterop\Interface\RequestTypeAliases;
-use StreamInterop\Impl\ReadonlyFileStream;
 use StreamInterop\Interface\StringableStream;
 use UploadInterop\Interface\UploadStructFactory;
 use UploadInterop\Impl\UploadFactory;
@@ -40,7 +39,7 @@ class RequestFactory implements RequestStructFactory
 
     public function __construct(
         protected RequestGlobals $globals = new RequestGlobals(),
-        protected ReadonlyFileStream $bodyStream = new ReadonlyFileStream('php://input'),
+        protected RequestBodyStream $bodyStream = new RequestBodyStream('php://input'),
         protected RequestUriFactory $requestUriFactory = new RequestUriFactory(),
         protected UploadStructFactory $uploadFactory = new UploadFactory(),
     ) {
@@ -185,14 +184,14 @@ class RequestFactory implements RequestStructFactory
     /**
      * @return upload_structs_array
      */
-    public function getUploads()
+    protected function getUploads()
     {
         return $this->uploadFactory->newUploadsFromFiles(
             $this->globals->_FILES,
         );
     }
 
-    public function getUri() : RequestUri
+    protected function getUri() : RequestUri
     {
         return $this->requestUriFactory->newRequestUri(
             $this->globals->_SERVER,

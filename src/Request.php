@@ -5,7 +5,6 @@ namespace RequestInterop\Impl;
 
 use RequestInterop\Interface\RequestStruct;
 use RequestInterop\Interface\RequestTypeAliases;
-use StreamInterop\Impl\ReadonlyFileStream;
 use UploadInterop\Interface\UploadTypeAliases;
 
 /**
@@ -40,7 +39,7 @@ readonly class Request implements RequestStruct
         public array $body,
         public array $cookies,
         public array $headers,
-        public ReadonlyFileStream $bodyStream,
+        public RequestBodyStream $bodyStream,
         public string $method,
         public array $query,
         public array $server,

@@ -5,7 +5,6 @@ namespace RequestInterop\Impl;
 
 use RequestInterop\Impl\RequestFactory;
 use RequestInterop\Interface\RequestTypeAliases;
-use StreamInterop\Impl\ReadonlyFileStream;
 use UploadInterop\Impl\Upload;
 use UploadInterop\Interface\UploadTypeAliases;
 
@@ -34,7 +33,7 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         ];
     }
 
-    protected function newRequest(?ReadonlyFileStream $bodyStream = null) : Request
+    protected function newRequest(?RequestBodyStream $bodyStream = null) : Request
     {
         $factory = $bodyStream
             ? new RequestFactory(bodyStream: $bodyStream)
@@ -83,7 +82,7 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         $expect = ['foo' => 'bar'];
 
         $actual = $this->newRequest(
-            bodyStream: new ReadonlyFileStream(
+            bodyStream: new RequestBodyStream(
                 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.json',
             ),
         );
@@ -97,7 +96,7 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         $expect = ['foo' => 'bar'];
 
         $actual = $this->newRequest(
-            bodyStream: new ReadonlyFileStream(
+            bodyStream: new RequestBodyStream(
                 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml',
             ),
         );
@@ -112,7 +111,7 @@ class RequestFactoryTest extends \PHPUnit\Framework\TestCase
         $expect = ['foo' => 'bar'];
 
         $actual = $this->newRequest(
-            bodyStream: new ReadonlyFileStream(
+            bodyStream: new RequestBodyStream(
                 'file://' . __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.xml',
             ),
         );
