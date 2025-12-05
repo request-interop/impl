@@ -7,24 +7,22 @@ class RequestBodyStreamTest extends \PHPUnit\Framework\TestCase
 {
     public function test__toString() : void
     {
-        $file = __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.txt';
-
-        $requestBodyStream = new RequestBodyStream(
-            "file://{$file}",
+        $content = (string) file_get_contents(
+            __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.txt',
         );
 
+        $requestBodyStream = new RequestBodyStream($content);
         $this->assertTrue($requestBodyStream->isOpen());
-        $expect = file_get_contents($file);
-        $this->assertSame($expect, (string) $requestBodyStream);
+        $this->assertSame($content, (string) $requestBodyStream);
     }
 
     public function testSubString() : void
     {
-        $file = __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.txt';
-
-        $requestBodyStream = new RequestBodyStream(
-            "file://{$file}",
+        $content = (string) file_get_contents(
+            __DIR__ . DIRECTORY_SEPARATOR . 'raw-body.txt',
         );
+
+        $requestBodyStream = new RequestBodyStream($content);
 
         $expect = "ello";
         $actual = $requestBodyStream->subString(1, 4);

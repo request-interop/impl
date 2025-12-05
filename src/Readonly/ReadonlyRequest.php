@@ -1,30 +1,24 @@
 <?php
 declare(strict_types=1);
 
-namespace RequestInterop\Impl;
+namespace RequestInterop\Impl\Readonly;
 
+use RequestInterop\Impl\RequestBodyStream;
 use RequestInterop\Interface\RequestStruct;
 use RequestInterop\Interface\RequestTypeAliases;
 use UploadInterop\Interface\UploadTypeAliases;
+use UriInterop\Impl\ImmutableUri;
 
 /**
- * @phpstan-import-type request_cookies_array from RequestTypeAliases
- *
- * @phpstan-import-type upload_files_array from UploadTypeAliases
- *
- * @phpstan-import-type request_headers_array from RequestTypeAliases
- *
  * @phpstan-import-type request_body_array from RequestTypeAliases
- *
+ * @phpstan-import-type request_cookies_array from RequestTypeAliases
+ * @phpstan-import-type request_headers_array from RequestTypeAliases
  * @phpstan-import-type request_method_string from RequestTypeAliases
- *
  * @phpstan-import-type request_query_array from RequestTypeAliases
- *
  * @phpstan-import-type request_server_array from RequestTypeAliases
- *
  * @phpstan-import-type upload_structs_array from UploadTypeAliases
  */
-readonly class Request implements RequestStruct
+readonly class ReadonlyRequest implements RequestStruct
 {
     /**
      * @param request_body_array $body
@@ -44,7 +38,7 @@ readonly class Request implements RequestStruct
         public array $query,
         public array $server,
         public array $uploads,
-        public RequestUri $uri,
+        public ImmutableUri $uri,
     ) {
     }
 }

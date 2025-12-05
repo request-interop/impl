@@ -1,12 +1,26 @@
 # Request-Interop Implementation
 
-The reference implementation is readonly; it cannot be modified after construction, and provides idempotent readonly access to the request body.
+There are two reference implementations: one is readonly, and cannot be modified after construction; the other is mutable.
+
+## Readonly
 
 ```php
-use RequestInterop\Impl\Request;
-use RequestInterop\Impl\RequestFactory;
+use RequestInterop\Impl\Readonly\ReadonlyRequest;
+use RequestInterop\Impl\Readonly\ReadonlyRequestFactory;
 
-$factory = new RequestFactory();
+$factory = new ReadonlyRequestFactory();
 $request = $factory->newRequest();
-assert($request instanceof Request::class);
+assert($request instanceof ReadonlyRequest::class);
+```
+
+
+## Mutable
+
+```php
+use RequestInterop\Impl\Mutable\MutableRequest;
+use RequestInterop\Impl\Mutable\MutableRequestFactory;
+
+$factory = new MutableRequestFactory();
+$request = $factory->newRequest();
+assert($request instanceof MutableRequest::class);
 ```

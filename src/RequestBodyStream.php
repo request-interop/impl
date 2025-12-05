@@ -21,10 +21,18 @@ class RequestBodyStream implements StringableStream
      */
     protected mixed $resource;
 
-    public function __construct(protected string $file = 'php://input')
+    public function __construct(?string $content = null)
     {
-        $resource = fopen($this->file, 'rb');
-        assert(is_resource($resource));
+        if ($content === null) {
+            $resource = fopen('php://input', 'rb');
+            assert(is_resource($resource));
+        } else {
+            $resource = fopen('php://memory', 'wb+');
+            assert(is_resource($resource));
+            fwrite($resource, $content);
+            rewind($resource);
+        }
+
         $this->resource = $resource;
     }
 
@@ -82,7 +90,7 @@ class RequestBodyStream implements StringableStream
         $position = ftell($this->resource);
 
         if ($position === false) {
-            throw new RequestBodyStreamException("Tell failed on {$this->file}");
+            throw new RequestBodyStreamException("Tell failed on request body");
         }
 
         return $position;
@@ -93,7 +101,7 @@ class RequestBodyStream implements StringableStream
         $result = fseek($this->resource, $offset, $whence);
 
         if ($result === -1) {
-            throw new RequestBodyStreamException("Seek failed on {$this->file}");
+            throw new RequestBodyStreamException("Seek failed on request body");
         }
     }
 
@@ -102,7 +110,7 @@ class RequestBodyStream implements StringableStream
         $string = stream_get_contents($this->resource, $length);
 
         if ($string === false) {
-            throw new RequestBodyStreamException("Read failed on {$this->file}");
+            throw new RequestBodyStreamException("Read failed on request body");
         }
 
         return $string;

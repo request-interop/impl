@@ -6,10 +6,10 @@ namespace RequestInterop\Impl;
 use RequestInterop\Interface\RequestStruct;
 use RequestInterop\Interface\RequestStructFactory;
 use RequestInterop\Interface\RequestTypeAliases;
-use StreamInterop\Interface\StringableStream;
 use UploadInterop\Interface\UploadStructFactory;
 use UploadInterop\Impl\UploadFactory;
 use UploadInterop\Interface\UploadTypeAliases;
+use UriInterop\Interface\UriStruct;
 
 /**
  * @phpstan-import-type request_cookies_array from RequestTypeAliases
@@ -21,7 +21,7 @@ use UploadInterop\Interface\UploadTypeAliases;
  * @phpstan-import-type upload_files_array from UploadTypeAliases
  * @phpstan-import-type upload_structs_array from UploadTypeAliases
  */
-class RequestFactory implements RequestStructFactory
+abstract class RequestFactory implements RequestStructFactory
 {
     /** @var request_body_array */
     protected array $body;
@@ -35,12 +35,11 @@ class RequestFactory implements RequestStructFactory
     /** @var upload_structs_array */
     protected array $uploads;
 
-    protected RequestUri $uri;
+    protected UriStruct $uri;
 
     public function __construct(
         protected RequestGlobals $globals = new RequestGlobals(),
         protected RequestBodyStream $bodyStream = new RequestBodyStream('php://input'),
-        protected RequestUriFactory $requestUriFactory = new RequestUriFactory(),
         protected UploadStructFactory $uploadFactory = new UploadFactory(),
     ) {
         $this->headers = $this->getHeaders();
@@ -50,24 +49,9 @@ class RequestFactory implements RequestStructFactory
         $this->uri = $this->getUri();
     }
 
-    /**
-     * @inheritdoc
-     * @return Request
-     */
-    public function newRequest() : RequestStruct
-    {
-        return new Request(
-            body: $this->body,
-            bodyStream: $this->bodyStream,
-            cookies: $this->globals->_COOKIE,
-            headers: $this->headers,
-            method: $this->method,
-            query: $this->globals->_GET,
-            server: $this->globals->_SERVER,
-            uploads: $this->uploads,
-            uri: $this->uri,
-        );
-    }
+    abstract public function newRequest() : RequestStruct;
+
+    abstract protected function getUri() : UriStruct;
 
     /**
      * @return request_body_array
@@ -191,10 +175,111 @@ class RequestFactory implements RequestStructFactory
         );
     }
 
-    protected function getUri() : RequestUri
+    /**
+     * @return array{scheme:non-empty-string}
+     */
+    protected function getUriScheme() : array
     {
-        return $this->requestUriFactory->newRequestUri(
-            $this->globals->_SERVER,
+        $server = $this->globals->_SERVER + ['HTTPS' => ''];
+
+        $isHttps = filter_var(
+            $server['HTTPS'],
+            FILTER_VALIDATE_BOOL,
+            FILTER_NULL_ON_FAILURE
         );
+
+        return $isHttps ? ['scheme' => 'https'] : ['scheme' => 'http'];
+    }
+
+    /**
+     * @return array{host:string, port:?int}
+     */
+    protected function getUriHostAndPort() : array
+    {
+        $server = $this->globals->_SERVER + [
+            'HTTP_HOST' => null,
+            'SERVER_ADDR' => null,
+            'SERVER_PORT' => null,
+        ];
+
+        if ($server['SERVER_PORT'] !== null) {
+            $server['SERVER_PORT'] = (int) $server['SERVER_PORT'];
+        }
+
+        if (
+            is_string($server['HTTP_HOST'])
+            && preg_match(
+                '~^(?<host>(\[.*]|[^:])*)(:(?<port>[^/?#]*))?$~x',
+                (string) $server['HTTP_HOST'],
+                $matches,
+                PREG_UNMATCHED_AS_NULL
+            )
+        ) {
+            return [
+                'host' => $matches['host'],
+                'port' => $matches['port'] === null
+                    ? $server['SERVER_PORT']
+                    : (int) $matches['port'],
+            ];
+        }
+
+        if ($server['SERVER_ADDR'] === null) {
+            throw new RequestException('Could not determine host and port.');
+        }
+
+        if (
+            filter_var(
+                $server['SERVER_ADDR'],
+                FILTER_VALIDATE_IP,
+                FILTER_FLAG_IPV4
+            )
+        ) {
+            return [
+                'host' => (string) $server['SERVER_ADDR'],
+                'port' => $server['SERVER_PORT'],
+            ];
+        }
+
+        return [
+            'host' => '[' . $server['SERVER_ADDR'] . ']',
+            'port' => $server['SERVER_PORT'],
+        ];
+    }
+
+    /**
+     * @return array{path:string, query:?string}
+     */
+    protected function getUriPathAndQuery() : array
+    {
+        $server = $this->globals->_SERVER + [
+            'IIS_WasUrlRewritten' => '',
+            'PHP_SELF' => '',
+            'QUERY_STRING' => null,
+            'UNENCODED_URL' => '',
+        ];
+
+        if (
+            $server['IIS_WasUrlRewritten'] === '1'
+            && $server['UNENCODED_URL'] !== ''
+        ) {
+            $parts = explode('?', (string) $server['UNENCODED_URL'], 2);
+
+            return [
+                'path' => $parts[0],
+                'query' => $parts[1] ?? null
+            ];
+        }
+
+        if (isset($server['REQUEST_URI'])) {
+            $parts = explode('?', $server['REQUEST_URI'], 2);
+            $path = $parts[0];
+            $query = $server['QUERY_STRING'] ?? $parts[1] ?? null;
+            return ['path' => $path, 'query' => $query];
+        }
+
+        return [
+            'path' => (string) $server['PHP_SELF'],
+            'query' => $server['QUERY_STRING']
+        ];
     }
 }
