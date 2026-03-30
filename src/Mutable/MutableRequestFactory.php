@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace RequestInterop\Impl\Mutable;
 
-use RequestInterop\Interface\RequestStruct;
-use UriInterop\Interface\UriStruct;
-use UriInterop\Impl\MutableUri;
 use RequestInterop\Impl\RequestFactory;
+use RequestInterop\Interface\RequestStruct;
+use UriInterop\Impl\MutableUri;
+use UriInterop\Interface\UriStruct;
 
 /**
  * @property MutableUri $uri

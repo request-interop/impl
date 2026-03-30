@@ -18,8 +18,7 @@
         "php": ">=8.4",
         "request-interop/interface": "1.x@dev",
         "uri-interop/impl": "^1.0",
-        "upload-interop/interface": "1.x@dev",
-        "upload-interop/impl": "1.x@dev"
+        "upload-interop/impl": "^1.0"
     },
     "autoload-dev": {
         "psr-4": {
@@ -30,11 +29,14 @@
         "pds/composer-script-names": "^1.0",
         "pds/skeleton": "^1.0",
         "phpstan/phpstan": "^2.0",
-        "phpunit/phpunit": "^11.0"
+        "phpunit/phpunit": "^11.0",
+        "pmjones/php-styler": "0.x@dev"
     },
     "scripts": {
         "analyze": "./vendor/bin/phpstan analyze -c phpstan.neon",
-        "check": "composer test && composer analyze",
+        "check": "composer test && composer analyze && composer cs-check",
+        "cs-check": "./vendor/bin/php-styler check --workers=auto",
+        "cs-fix": "./vendor/bin/php-styler apply --workers=auto",
         "test": "./vendor/bin/phpunit",
         "test-coverage": "./vendor/bin/phpunit --coverage-html=./tmp/coverage"
     }
