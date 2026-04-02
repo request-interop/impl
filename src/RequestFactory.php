@@ -102,6 +102,7 @@ abstract class RequestFactory implements RequestStructFactory
             512,
             JSON_BIGINT_AS_STRING,
         );
+
         return is_array($body) ? $body : [];
     }
 
