@@ -24,16 +24,93 @@ use UriInterop\Interface\UriTypeAliases;
 #[\PHPUnit\Framework\Attributes\BackupGlobals(true)]
 abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
 {
+    /**
+     * @return mixed[]
+     */
+    public static function provideUriHostAndPort() : array
+    {
+        return [
+            [
+                'HTTP_HOST' => 'example.com',
+                'host' => 'example.com',
+                'port' => null,
+            ],
+            [
+                'HTTP_HOST' => 'example.com:8080',
+                'host' => 'example.com',
+                'port' => 8080,
+            ],
+            [
+                'HTTP_HOST' => 'example.com',
+                'SERVER_PORT' => '8080',
+                'host' => 'example.com',
+                'port' => 8080,
+            ],
+            ['SERVER_ADDR' => '8.8.8.8', 'host' => '8.8.8.8', 'port' => null],
+            [
+                'SERVER_ADDR' => '8.8.8.8',
+                'SERVER_PORT' => '8080',
+                'host' => '8.8.8.8',
+                'port' => 8080,
+            ],
+            [
+                'SERVER_ADDR' => '2001:4860:4860::8888',
+                'host' => '[2001:4860:4860::8888]',
+                'port' => null,
+            ],
+            [
+                'SERVER_ADDR' => '2001:4860:4860::8888',
+                'SERVER_PORT' => '8080',
+                'host' => '[2001:4860:4860::8888]',
+                'port' => 8080,
+            ],
+        ];
+    }
+
+    /**
+     * @return mixed[]
+     */
+    public static function provideUriPathAndQuery() : array
+    {
+        return [
+            ['path' => '', 'query' => null, 'queryParams' => null],
+            [
+                'REQUEST_URI' => '/foo/bar?baz=dib',
+                'path' => '/foo/bar',
+                'query' => 'baz=dib',
+                'queryParams' => ['baz' => 'dib'],
+            ],
+            [
+                'REQUEST_URI' => '/foo/bar',
+                'QUERY_STRING' => 'baz=dib',
+                'path' => '/foo/bar',
+                'query' => 'baz=dib',
+                'queryParams' => ['baz' => 'dib'],
+            ],
+            [
+                'REQUEST_URI' => '/foo/bar?baz=dib',
+                'QUERY_STRING' => 'zim=gir',
+                'path' => '/foo/bar',
+                'query' => 'zim=gir',
+                'queryParams' => ['zim' => 'gir'],
+            ],
+            [
+                'IIS_WasUrlRewritten' => '1',
+                'UNENCODED_URL' => '/foo/bar?baz=dib',
+                'path' => '/foo/bar',
+                'query' => 'baz=dib',
+                'queryParams' => ['baz' => 'dib'],
+            ],
+        ];
+    }
+
     protected function setUp() : void
     {
         $_COOKIE = [];
         $_FILES = [];
         $_GET = [];
         $_POST = [];
-        $_SERVER = [
-            'REQUEST_METHOD' => 'GET',
-            'SERVER_ADDR' => '127.0.0.1',
-        ];
+        $_SERVER = ['REQUEST_METHOD' => 'GET', 'SERVER_ADDR' => '127.0.0.1'];
     }
 
     abstract protected function newRequest(
@@ -98,7 +175,6 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
         );
 
         $this->assertSame($expect, $actual->body);
-
     }
 
     public function testBodyTypeXml_text() : void
@@ -136,7 +212,7 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
         $this->newRequest();
     }
 
-    public function testUploads(): void
+    public function testUploads() : void
     {
         $_FILES = [
             'foo1' => [
@@ -182,7 +258,7 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
     public function testUriHostAndPort(
         string $host,
         ?int $port,
-        string ...$server
+        string ...$server,
     ) : void
     {
         foreach ($server as $key => $val) {
@@ -192,53 +268,6 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
         $actual = $this->newRequest()->uri;
         $this->assertSame($host, $actual->host);
         $this->assertSame($port, $actual->port);
-    }
-
-    /**
-     * @return mixed[]
-     */
-    public static function provideUriHostAndPort() : array
-    {
-        return [
-            [
-                'HTTP_HOST' => 'example.com',
-                'host' => 'example.com',
-                'port' => null,
-            ],
-            [
-                'HTTP_HOST' => 'example.com:8080',
-                'host' => 'example.com',
-                'port' => 8080,
-            ],
-            [
-                'HTTP_HOST' => 'example.com',
-                'SERVER_PORT' => '8080',
-                'host' => 'example.com',
-                'port' => 8080,
-            ],
-            [
-                'SERVER_ADDR' => '8.8.8.8',
-                'host' => '8.8.8.8',
-                'port' => null,
-            ],
-            [
-                'SERVER_ADDR' => '8.8.8.8',
-                'SERVER_PORT' => '8080',
-                'host' => '8.8.8.8',
-                'port' => 8080,
-            ],
-            [
-                'SERVER_ADDR' => '2001:4860:4860::8888',
-                'host' => '[2001:4860:4860::8888]',
-                'port' => null,
-            ],
-            [
-                'SERVER_ADDR' => '2001:4860:4860::8888',
-                'SERVER_PORT' => '8080',
-                'host' => '[2001:4860:4860::8888]',
-                'port' => 8080,
-            ],
-        ];
     }
 
     public function testCannotDetermineUriHostAndPort() : void
@@ -268,46 +297,5 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
         $this->assertSame($path, $actual->path);
         $this->assertSame($query, $actual->query);
         $this->assertSame($queryParams, $actual->queryParams);
-    }
-
-    /**
-     * @return mixed[]
-     */
-    public static function provideUriPathAndQuery() : array
-    {
-        return [
-            [
-                'path' => '',
-                'query' => null,
-                'queryParams' => null,
-            ],
-            [
-                'REQUEST_URI' => '/foo/bar?baz=dib',
-                'path' => '/foo/bar',
-                'query' => 'baz=dib',
-                'queryParams' => ['baz' => 'dib'],
-            ],
-            [
-                'REQUEST_URI' => '/foo/bar',
-                'QUERY_STRING' => 'baz=dib',
-                'path' => '/foo/bar',
-                'query' => 'baz=dib',
-                'queryParams' => ['baz' => 'dib'],
-            ],
-            [
-                'REQUEST_URI' => '/foo/bar?baz=dib',
-                'QUERY_STRING' => 'zim=gir',
-                'path' => '/foo/bar',
-                'query' => 'zim=gir',
-                'queryParams' => ['zim' => 'gir'],
-            ],
-            [
-                'IIS_WasUrlRewritten' => '1',
-                'UNENCODED_URL' => '/foo/bar?baz=dib',
-                'path' => '/foo/bar',
-                'query' => 'baz=dib',
-                'queryParams' => ['baz' => 'dib'],
-            ],
-        ];
     }
 }
