@@ -4,8 +4,10 @@ use PhpStyler\Files;
 use PhpStyler\Format\DeclarationFormat;
 
 return new Config(
-    files: new Files(__DIR__ . '/src'),
-    cache: __DIR__ . '/.php-styler.cache',
+    files: new Files(
+        __DIR__ . '/src',
+        __DIR__ . '/tests',
+    ),
     format: new DeclarationFormat(
         lineLen: 84,
         indentLen: 4,

@@ -16,7 +16,7 @@
     },
     "require": {
         "php": ">=8.4",
-        "request-interop/interface": "1.x@dev",
+        "request-interop/interface": "^1.0",
         "uri-interop/impl": "^1.0",
         "upload-interop/impl": "^1.0"
     },
@@ -36,7 +36,7 @@
         "analyze": "./vendor/bin/phpstan analyze -c phpstan.neon",
         "check": "composer test && composer analyze && composer cs-check",
         "cs-check": "./vendor/bin/php-styler check --workers=auto",
-        "cs-fix": "./vendor/bin/php-styler apply --force --workers=auto",
+        "cs-fix": "./vendor/bin/php-styler apply --workers=auto",
         "test": "./vendor/bin/phpunit",
         "test-coverage": "./vendor/bin/phpunit --coverage-html=./tmp/coverage"
     }
