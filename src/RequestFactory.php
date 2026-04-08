@@ -39,9 +39,7 @@ abstract class RequestFactory implements RequestStructFactory
 
     public function __construct(
         protected RequestGlobals $globals = new RequestGlobals(),
-        protected RequestBodyStream $bodyStream = new RequestBodyStream(
-            'php://input',
-        ),
+        protected RequestBodyStream $bodyStream = new RequestBodyStream(),
         protected UploadStructFactory $uploadFactory = new UploadFactory(),
     ) {
         $this->headers = $this->getHeaders();

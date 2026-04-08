@@ -138,6 +138,17 @@ abstract class RequestFactoryTestCase extends \PHPUnit\Framework\TestCase
         $this->assertSame($expect, $actual->headers);
     }
 
+    public function testBodyStream() : void
+    {
+        $actual = $this->newRequest();
+        $this->assertSame('', (string) $actual->bodyStream);
+
+        $this->assertSame(
+            'php://input',
+            $actual->bodyStream->metadata['uri'] ?? null,
+        );
+    }
+
     public function testBody() : void
     {
         $_POST = ['foo' => 'bar'];
